@@ -130,6 +130,26 @@ class ArcadeApp:
         else:
             return f"{original_title} v2"
 
+    def latest_in_lineage(self, game_id: str) -> str:
+        """Follow parent->child links to the newest version in a game's chain.
+
+        Remixes should build on the latest version, so remicing an older
+        version of a chain resolves to its newest descendant.
+        """
+        current = game_id
+        seen = {current}
+        while True:
+            children = [
+                (child_id, meta.get("created", 0))
+                for child_id, meta in self.arcade_games.game_metadata.items()
+                if meta.get("parent_game_id") == current and child_id not in seen
+            ]
+            if not children:
+                break
+            current = max(children, key=lambda item: item[1])[0]
+            seen.add(current)
+        return current
+
     def _register_routes(self) -> None:
         @self.app.get("/")
         async def root(request: Request):
@@ -177,26 +197,11 @@ class ArcadeApp:
 
         @self.app.get("/api/server-running-status")
         async def server_running_status():
+            # Fork: the app never starts the Lemonade Server - it only
+            # reports whether the user's own server is reachable.
             logger.info("=== Server running status endpoint called ===")
             is_running = await self.lemonade_handle.check_lemonade_server_running()
-            logger.info(f"Initial running check result: {is_running}")
-            if not is_running:
-                logger.info("Server not running, attempting to start automatically...")
-                start_result = await self.lemonade_handle.start_lemonade_server()
-                logger.info(f"Auto-start result: {start_result}")
-                if start_result["success"]:
-                    import asyncio
-
-                    logger.info("Waiting 2 seconds for server to initialize...")
-                    await asyncio.sleep(2)
-                    is_running = (
-                        await self.lemonade_handle.check_lemonade_server_running()
-                    )
-                    logger.info(f"Running check after auto-start: {is_running}")
-                else:
-                    logger.warning(
-                        f"Auto-start failed: {start_result.get('error', 'Unknown error')}"
-                    )
+            logger.info(f"Running check result: {is_running}")
             result = {"running": is_running}
             logger.info(f"=== Returning server running status: {result} ===")
             return JSONResponse(result)
@@ -354,19 +359,25 @@ class ArcadeApp:
                 raise HTTPException(
                     status_code=403, detail="Cannot remix built-in games"
                 )
+            # Remix from the newest version of the chain, not the clicked game
+            source_game_id = self.latest_in_lineage(game_id)
+            if source_game_id != game_id:
+                logger.debug(
+                    f"Remix resolved to latest lineage version: {source_game_id}"
+                )
             new_game_id = self.generate_game_id()
             logger.debug(f"Generated new game ID for remix: {new_game_id}")
 
             async def generate():
                 try:
-                    original_title = self.arcade_games.game_metadata[game_id].get(
-                        "title", "Untitled Game"
-                    )
+                    original_title = self.arcade_games.game_metadata[
+                        source_game_id
+                    ].get("title", "Untitled Game")
                     new_title = self.generate_next_version_title(original_title)
                     async for (
                         stream_item
                     ) in self.orchestrator.remix_and_launch_game_with_streaming(
-                        game_id, new_game_id, remix_prompt, new_title
+                        source_game_id, new_game_id, remix_prompt, new_title
                     ):
                         yield stream_item
                 except Exception as e:
@@ -546,7 +557,7 @@ def run_game_file(game_file_path):
         sys.exit(1)
 
 
-def main():
+def main(port: int | None = None, open_browser: bool = True):
     """Main entry point for the application."""
     # Configure logging if not already configured (when run directly, not via CLI)
     if not logging.getLogger().handlers:
@@ -565,14 +576,15 @@ def main():
         return
 
     # Server mode: start the Infinity Arcade server
-    import webbrowser
     import threading
 
     # Keep console visible for debugging and control
     print("Starting Infinity Arcade...")
     print("Press Ctrl+C to quit")
 
-    port = 8081
+    # Port: explicit argument > INFINITY_ARCADE_PORT env var > 8081
+    if port is None:
+        port = int(os.environ.get("INFINITY_ARCADE_PORT", "8081"))
 
     # Start the server in a separate thread
     def run_server():
@@ -586,11 +598,16 @@ def main():
     server_thread = threading.Thread(target=run_server, daemon=True)
     server_thread.start()
 
-    # Wait a moment then open browser
+    # Wait a moment then open browser (unless --no-browser)
     print("Waiting for server to start...")
     time.sleep(3)
-    print(f"Opening browser to http://127.0.0.1:{port}")
-    webbrowser.open(f"http://127.0.0.1:{port}")
+    if open_browser:
+        import webbrowser
+
+        print(f"Opening browser to http://127.0.0.1:{port}")
+        webbrowser.open(f"http://127.0.0.1:{port}")
+    else:
+        print(f"Server available at http://127.0.0.1:{port}")
 
     # Shutdown: stop all running games, used by both Ctrl+C and SIGTERM
     def shutdown() -> None:

@@ -18,6 +18,17 @@ def main():
         default="info",
         help="Set the logging level (default: info)",
     )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=None,
+        help="Port for the web server (default: 8081, or $INFINITY_ARCADE_PORT)",
+    )
+    parser.add_argument(
+        "--no-browser",
+        action="store_true",
+        help="Do not open the browser automatically at startup",
+    )
 
     args = parser.parse_args()
 
@@ -48,7 +59,7 @@ def main():
 
     from .main import main as run_app
 
-    run_app()
+    run_app(port=args.port, open_browser=not args.no_browser)
 
 
 if __name__ == "__main__":

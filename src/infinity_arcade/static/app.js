@@ -89,7 +89,10 @@ class SetupManager {
         }
         
         if (btn) {
-            if (showButton) {
+            // Fork: the app never installs the server or models - the user
+            // manages those manually, so the install buttons stay hidden
+            const installChecks = ['installed', 'model'];
+            if (showButton && !installChecks.includes(checkName)) {
                 btn.style.display = 'block';
                 btn.textContent = buttonText;
                 btn.onclick = buttonAction;
@@ -1322,11 +1325,22 @@ function renderGames() {
             stopButtonHtml = `<button class="stop-btn" onclick="stopGame('${gameId}')">Stop</button>`;
             gameErrorHtml = `<div class="game-error" id="game-error-${gameId}"></div>`;
         }
-        
+
+        // Lineage info: version number and the game this one was remixed from
+        let metaHtml = '';
+        if (gameData.version) {
+            const metaParts = [`v${gameData.version}`];
+            if (gameData.parent_game_id && games[gameData.parent_game_id]) {
+                metaParts.push(`from: ${games[gameData.parent_game_id].title}`);
+            }
+            metaHtml = `<div class="game-meta">${metaParts.join(' · ')}</div>`;
+        }
+
         gameItem.innerHTML = `
             ${deleteButtonHtml}
             ${stopButtonHtml}
             <div class="game-title">${gameData.title}</div>
+            ${metaHtml}
             ${gameErrorHtml}
         `;
         

@@ -70,6 +70,8 @@ class GameOrchestrator:
             "title": game_title,
             "created": time.time(),
             "prompt": prompt,
+            "parent_game_id": None,
+            "version": 1,
         }
         self.storage.save_metadata()
 
@@ -118,10 +120,13 @@ class GameOrchestrator:
         # Save new game
         game_file = self.storage.games_dir / f"{new_game_id}.py"
         game_file.write_text(remixed_code, encoding="utf-8")
+        parent_meta = self.storage.game_metadata.get(original_game_id, {})
         self.storage.game_metadata[new_game_id] = {
             "title": new_title,
             "created": time.time(),
-            "prompt": f"Remix of '{self.storage.game_metadata.get(original_game_id, {}).get('title', 'Untitled Game')}': {remix_prompt}",
+            "prompt": f"Remix of '{parent_meta.get('title', 'Untitled Game')}': {remix_prompt}",
+            "parent_game_id": original_game_id,
+            "version": parent_meta.get("version", 0) + 1,
         }
         self.storage.save_metadata()
 

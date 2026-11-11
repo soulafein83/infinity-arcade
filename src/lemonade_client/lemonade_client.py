@@ -12,12 +12,28 @@ from typing import List, Dict, Optional
 import httpx
 
 
-# Model information: (model_name, size_gb)
-MODELS = {
-    "high_end": ("Qwen3-Coder-30B-A3B-Instruct-GGUF", 18.6),
-    "npu": ("Playable1-GGUF-Q4_K_M", 4.68),
-    "default": ("Qwen3.5-9B-MTP-GGUF-UD-Q4_K_XL", 6.57),
-}
+def _build_models():
+    """
+    Model information: (model_name, size_gb)
+
+    Fork: individual models can be overridden with environment variables
+    (LEMONADE_MODEL_HIGH_END / LEMONADE_MODEL_NPU / LEMONADE_MODEL_DEFAULT) -
+    in the fork the user manages models manually, so custom model names are
+    allowed (size is unknown for overridden models).
+    """
+    models = {
+        "high_end": ("Qwen3-Coder-30B-A3B-Instruct-GGUF", 18.6),
+        "npu": ("Playable1-GGUF-Q4_K_M", 4.68),
+        "default": ("Qwen3.5-9B-MTP-GGUF-UD-Q4_K_XL", 6.57),
+    }
+    for key in models:
+        override = os.environ.get(f"LEMONADE_MODEL_{key.upper()}")
+        if override:
+            models[key] = (override, None)
+    return models
+
+
+MODELS = _build_models()
 
 
 class LemonadeClient:
@@ -39,7 +55,9 @@ class LemonadeClient:
             logger if logger is not None else logging.getLogger("lemonade_client")
         )
 
-        self.url = "http://127.0.0.1:13305"
+        # Fork: server URL is configurable via the LEMONADE_URL env var
+        # (the app expects the user's own Lemonade Server).
+        self.url = os.environ.get("LEMONADE_URL", "http://127.0.0.1:13305")
 
     def is_pyinstaller_environment(self):
         """

@@ -89,7 +89,7 @@ wystarczające, ale kosztują ~2× czas. Propozycja: wartość konfigurowalna
 
 ## 3. Magazyn gier i wersjonowanie 🟡
 
-### 3.1. Rodowód gier w metadata
+### 3.1. Rodowód gier w metadata ✅
 **Problem:** remix tworzy nowy `game_id`, ale jedynym śladem pochodzenia jest
 tekst w polu `prompt` („Remix of 'Pong Duel v2'"). Trudno wybrać właściwą wersję
 do kolejnego remiksu (stąd reguła „remiksuj od najnowszej”).
@@ -114,7 +114,7 @@ UI pokazuje drzewo/łańcuch wersji; remix domyślnie z najnowszej wersji łańc
 
 ---
 
-## 5. Konfiguracja w forku 🟡
+## 5. Konfiguracja w forku ✅
 
 W forku wiele rzeczy jest zaszytych — warto wydostać do konfiguracji
 (plik `~/.infinity-arcade/config.json` lub zmienne środowiskowe):
