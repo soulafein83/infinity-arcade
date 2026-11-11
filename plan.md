@@ -1,6 +1,6 @@
 # Plan ulepszeń — Infinity Arcade (fork `soulafein83/infinity-arcade`)
 
-> Stan: **wykonano 1.1, 1.2, 1.3, 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 4, 5, 6** (commity Partii A–D + 3.2 + 4 + 2.2 + 6), reszta: propozycje.
+> Stan: **wykonano 1.1, 1.2, 1.3, 2.1, 2.2, 2.3, 2.4, 2.5, 3.1, 3.2, 4, 5, 6** (commity Partii A–D + 3.2 + 4 + 2.2 + 6 + 2.5), reszta: propozycje.
 > Prioritety: 🔴 wysokie (wpływ na stabilność/jakość gier), 🟡 średnie (UX/komfort), 🟢 niskie (porządek, przyszłość).
 >
 > Zasady forka: rozwijany oddzielnie od upstreamu (`lemonade-sdk/infinity-arcade`),
@@ -93,10 +93,18 @@ wersja kodu znika.
 **Propozycja:** przed zapisaniem `fixed_code` skopiować stary plik do
 `~/.infinity-arcade/backups/{game_id}.v{n}.py` (metadane: czas, powód fixa).
 
-### 2.5. Liczba prób auto-fix
+### 2.5. Liczba prób auto-fix ✅
 `max_retries=1` w `launch_game_endpoint` — dla większego modelu 2 próby bywają
 wystarczające, ale kosztują ~2× czas. Propozycja: wartość konfigurowalna
 (domyślnie 1), ewentualnie 2 za przełącznikiem.
+
+**Wykonanie:**
+- zmienna env `INFINITY_ARCADE_MAX_RETRIES` (domyślnie 1; wartości <1 i
+  niepoprawne clampowane/fallback do 1 — `parse_max_retries` w `main.py`),
+- wartość czytana przy starcie razem z pozostałymi ustawieniami forka i
+  przekazywana do `launch_game_with_auto_fix_streaming`,
+- testy jednostkowe `test/main_unit.py` (8 przypadków: brak, pusta, 1, 2,
+  białe znaki, 0, ujemna, niepoprawna).
 
 ---
 

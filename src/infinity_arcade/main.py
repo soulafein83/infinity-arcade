@@ -45,6 +45,21 @@ pygame = None
 logger = logging.getLogger("infinity_arcade.main")
 
 
+def parse_max_retries(raw: str | None) -> int:
+    """Parse the INFINITY_ARCADE_MAX_RETRIES env value.
+
+    Number of auto-fix attempts when a generated game fails to launch.
+    Invalid or empty values fall back to the default of 1; values below 1
+    are clamped up (0 retries means the game is never attempted at all).
+    """
+    if raw is None:
+        return 1
+    try:
+        return max(1, int(raw.strip()))
+    except ValueError:
+        return 1
+
+
 class NoCacheStaticFiles(StaticFiles):
     """Custom StaticFiles class with no-cache headers"""
 
@@ -120,6 +135,16 @@ class ArcadeApp:
         logger.info(
             f"Thinking (reasoning) mode: {'on' if self.thinking_enabled else 'off'} "
             "(INFINITY_ARCADE_THINKING)"
+        )
+        # Auto-fix attempts on game launch failure: configurable via
+        # INFINITY_ARCADE_MAX_RETRIES (default 1). More attempts help with
+        # bigger models but cost roughly the same wait time per attempt.
+        self.max_retries = parse_max_retries(
+            os.environ.get("INFINITY_ARCADE_MAX_RETRIES")
+        )
+        logger.info(
+            f"Auto-fix attempts on launch failure: {self.max_retries} "
+            "(INFINITY_ARCADE_MAX_RETRIES)"
         )
         self.llm_service = LLMService(
             self.lemonade_handle,
@@ -427,7 +452,7 @@ class ArcadeApp:
                     async for (
                         stream_item
                     ) in self.orchestrator.launch_game_with_auto_fix_streaming(
-                        game_id, game_title, max_retries=1
+                        game_id, game_title, max_retries=self.max_retries
                     ):
                         yield stream_item
                 except Exception as e:

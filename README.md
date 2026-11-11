@@ -100,6 +100,7 @@ any model via environment variables (see [Configuration](#configuration)).
 | Model (override any tier) | `LEMONADE_MODEL_HIGH_END`, `LEMONADE_MODEL_NPU`, `LEMONADE_MODEL_DEFAULT` | hardware-based selection |
 | Force one specific model | `INFINITY_ARCADE_MODEL` | hardware-based selection |
 | Thinking/reasoning mode | `INFINITY_ARCADE_THINKING=1` to enable | **off** (saves the token budget for the generated code) |
+| Auto-fix attempts on launch failure | `INFINITY_ARCADE_MAX_RETRIES` | `1` |
 | Web server port | `--port` CLI flag or `INFINITY_ARCADE_PORT` | `8081` |
 | Don't open the browser | `--no-browser` | browser opens at startup |
 | Log level | `--log-level {debug,info,warning,error}` | `info` |
