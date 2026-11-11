@@ -515,6 +515,25 @@ class ArcadeApp:
                     status_code=500, detail=f"Failed to open file: {str(e)}"
                 ) from e
 
+        @self.app.get("/api/game-source/{game_id}")
+        async def game_source_endpoint(game_id: str):
+            # Built-in viewer: return the game's Python source for display
+            # in the browser (instead of launching a system editor)
+            if game_id not in self.arcade_games.game_metadata:
+                raise HTTPException(status_code=404, detail="Game not found")
+            if game_id in self.arcade_games.builtin_games:
+                raise HTTPException(
+                    status_code=403, detail="Cannot view source code of built-in games"
+                )
+            game_file = self.arcade_games.games_dir / f"{game_id}.py"
+            if not game_file.exists():
+                raise HTTPException(status_code=404, detail="Game file not found")
+            code = game_file.read_text(encoding="utf-8")
+            title = self.arcade_games.game_metadata[game_id].get("title", "Untitled Game")
+            return JSONResponse(
+                {"code": code, "title": title, "line_count": len(code.splitlines())}
+            )
+
 
 arcade_app = ArcadeApp()
 app = arcade_app.app

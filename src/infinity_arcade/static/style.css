@@ -276,6 +276,116 @@ body {
     color: #8a93a5;
 }
 
+/* Running indicator badge */
+.running-badge {
+    margin-top: 4px;
+    font-size: 0.65rem;
+    font-weight: bold;
+    letter-spacing: 0.1em;
+    text-align: center;
+    color: #ffff00;
+}
+
+/* Remix lineage chain on the game card */
+.game-meta.chain {
+    flex-wrap: wrap;
+    gap: 2px;
+}
+
+.chain-link {
+    color: #00ff41;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.chain-link:hover {
+    color: #00ffff;
+    text-decoration: underline;
+}
+
+.chain-link.current {
+    color: #ffffff;
+    font-weight: bold;
+}
+
+.chain-arrow {
+    color: #8a93a5;
+    margin: 0 2px;
+}
+
+/* Built-in code viewer (modal) */
+.code-viewer {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.code-viewer-content {
+    background: #0d0d1a;
+    border: 2px solid #00ff41;
+    border-radius: 12px;
+    width: min(800px, 90vw);
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 25px rgba(0, 255, 65, 0.3);
+}
+
+.code-viewer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 15px;
+    background: #16213e;
+    border-bottom: 1px solid #00ff41;
+    border-radius: 10px 10px 0 0;
+}
+
+.code-viewer-title {
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: #00ff41;
+    word-wrap: break-word;
+}
+
+.code-viewer-actions {
+    display: flex;
+    gap: 8px;
+    margin-left: 15px;
+}
+
+.code-viewer-btn {
+    background: #1a1a2e;
+    border: 1px solid #00ff41;
+    border-radius: 6px;
+    color: #00ff41;
+    padding: 4px 10px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.code-viewer-btn:hover {
+    background: #00ff41;
+    color: #0d0d1a;
+}
+
+.code-viewer-code {
+    margin: 0;
+    padding: 15px;
+    overflow: auto;
+    flex: 1;
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    color: #c8d3e8;
+    white-space: pre;
+}
+
 .sidecar {
     background: rgba(0, 0, 0, 0.9);
     border: 2px solid #00ff41;

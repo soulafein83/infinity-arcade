@@ -1,6 +1,6 @@
 # Plan ulepszeń — Infinity Arcade (fork `soulafein83/infinity-arcade`)
 
-> Stan: **wykonano 1.1, 1.2, 1.3, 2.1, 2.3, 2.4, 3.1, 3.2, 5** (commity Partii A–D), reszta: propozycje.
+> Stan: **wykonano 1.1, 1.2, 1.3, 2.1, 2.3, 2.4, 3.1, 3.2, 4, 5** (commity Partii A–D + 3.2 + 4), reszta: propozycje.
 > Prioritety: 🔴 wysokie (wpływ na stabilność/jakość gier), 🟡 średnie (UX/komfort), 🟢 niskie (porządek, przyszłość).
 >
 > Zasady forka: rozwijany oddzielnie od upstreamu (`lemonade-sdk/infinity-arcade`),
@@ -104,13 +104,18 @@ UI pokazuje drzewo/łańcuch wersji; remix domyślnie z najnowszej wersji łańc
 
 ---
 
-## 4. Frontend / UX 🟡
+## 4. Frontend / UX 🟡 ✅
 
-- Karta gry: wskaźnik „działa” + przycisk Stop (z pkt 1.3) + „ostatni błąd”.
-- Widok kodu źródłowego w przeglądarce (endpoint `open-game-file` otwiera
-  plik systemowym edytorem — lepiej wbudowany viewer z podglądem).
-- Historia remiksów danej gry na karcie (z pkt 3.1).
-- Opcjonalnie: przycisk „Remix od najnowszej wersji” zamiast ręcznego wyboru.
+- Karta gry: wskaźnik „działa” (badge `● RUNNING`) + przycisk Stop (z pkt 1.3)
+  + „ostatni błąd”.
+- Widok kodu źródłowego w przeglądarce: endpoint `GET /api/game-source/{game_id}`
+  + modal `#codeViewer` (Copy, zamknięcie Esc/kliknięcie tła); pozostaje też
+  „Open Python File”.
+- Historia remiksów danej gry na karcie (z pkt 3.1): klikalny łańcuch wersji
+  (najstarsza → najnowsza); kliknięcie wersji uruchamia ją.
+- Opcjonalnie: przycisk „Remix od najnowszej wersji” — ZAKRYTE server-side w
+  pkt 3.1/Partii D (Remix zawsze remixuje najnowszy element łańcucha,
+  `latest_in_lineage`), dodatkowy przycisk niepotrzebny.
 
 ---
 

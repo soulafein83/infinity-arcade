@@ -11,6 +11,9 @@ let setupComplete = false;
 let isRemixMode = false;
 let remixGameId = null;
 
+// Code viewer state
+let currentCode = null;
+
 // Track games that have been played before (stored in localStorage)
 function hasGameBeenPlayed(gameId) {
     const playedGames = JSON.parse(localStorage.getItem('playedGames') || '[]');
@@ -1015,6 +1018,10 @@ function showContextMenu(x, y, gameId) {
                 🎨 Remix Game
             </button>
             <div class="context-menu-separator"></div>
+            <button class="context-menu-item" id="viewCode" onclick="viewGameCode()">
+                👁 View Code
+            </button>
+            <div class="context-menu-separator"></div>
             <button class="context-menu-item" id="openFile" onclick="openGameFile()">
                 📄 Open Python File
             </button>
@@ -1084,6 +1091,107 @@ async function openGameFile() {
     }
     hideContextMenu();
 }
+
+// Build the remix lineage for a game: all ancestors (up to the original)
+// plus the newest descendant branch (down, always following the newest
+// child). Returns game IDs in oldest → newest order, with a cycle guard.
+function lineageChain(gameId) {
+    const order = [];
+    const seen = new Set();
+
+    // Walk up to the original game
+    let cursor = gameId;
+    while (cursor && games[cursor] && !seen.has(cursor)) {
+        seen.add(cursor);
+        order.unshift(cursor);
+        cursor = games[cursor].parent_game_id || null;
+    }
+
+    // Walk down, always following the newest child (max `created`)
+    cursor = gameId;
+    for (let depth = 0; depth < 10; depth++) {
+        let newestChild = null;
+        let newestCreated = 0;
+        for (const [id, data] of Object.entries(games)) {
+            if (data.parent_game_id === cursor && !seen.has(id) && (data.created || 0) > newestCreated) {
+                newestChild = id;
+                newestCreated = data.created || 0;
+            }
+        }
+        if (!newestChild) break;
+        cursor = newestChild;
+        seen.add(cursor);
+        order.push(cursor);
+    }
+
+    return order;
+}
+
+// Launch a specific version from the remix chain on its card
+function launchLineageGame(gameId, event) {
+    if (event) event.stopPropagation();
+    launchGame(gameId);
+}
+
+// Built-in code viewer: fetch the game's Python source and show it
+// in a modal (instead of launching a system editor)
+async function viewGameCode() {
+    const gameId = selectedGameId;
+    if (!gameId) return;
+
+    // Check if it's a built-in game
+    if (games[gameId] && (games[gameId].builtin || gameId.startsWith('builtin_'))) {
+        alert('Cannot view source code of built-in games');
+        hideContextMenu();
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/game-source/${gameId}`);
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            alert('Failed to load source: ' + (error.detail || 'Unknown error'));
+            hideContextMenu();
+            return;
+        }
+        const data = await response.json();
+        currentCode = data.code;
+        document.getElementById('codeViewerTitle').textContent =
+            `${data.title} — ${data.line_count} lines`;
+        document.getElementById('codeViewerCode').textContent = data.code;
+        document.getElementById('codeViewer').style.display = 'flex';
+    } catch (error) {
+        alert('Error loading source: ' + error.message);
+    }
+    hideContextMenu();
+}
+
+function closeCodeViewer() {
+    const viewer = document.getElementById('codeViewer');
+    if (viewer) viewer.style.display = 'none';
+    currentCode = null;
+}
+
+async function copyCode() {
+    if (!currentCode) return;
+    try {
+        await navigator.clipboard.writeText(currentCode);
+        const button = document.getElementById('copyCodeBtn');
+        const originalText = button.textContent;
+        button.textContent = '[OK] Copied!';
+        setTimeout(() => { button.textContent = originalText; }, 1500);
+    } catch (error) {
+        alert('Error copying code: ' + error.message);
+    }
+}
+
+// Close the code viewer with the Escape key or a click on the backdrop
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeCodeViewer();
+});
+document.getElementById('codeViewer').addEventListener('click', (e) => {
+    if (e.target.id === 'codeViewer') closeCodeViewer();
+});
 
 async function copyPrompt() {
     if (!selectedGameId) return;
@@ -1326,19 +1434,31 @@ function renderGames() {
             gameErrorHtml = `<div class="game-error" id="game-error-${gameId}"></div>`;
         }
 
-        // Lineage info: version number and the game this one was remixed from
+        // Running indicator badge (in addition to the Stop button)
+        let runningBadgeHtml = '';
+        if (runningGameId === gameId) {
+            runningBadgeHtml = `<div class="running-badge">● RUNNING</div>`;
+        }
+
+        // Remix lineage: clickable chain of versions, oldest → newest.
+        // Clicking a version other than the current one launches that version.
         let metaHtml = '';
         if (gameData.version) {
-            const metaParts = [`v${gameData.version}`];
-            if (gameData.parent_game_id && games[gameData.parent_game_id]) {
-                metaParts.push(`from: ${games[gameData.parent_game_id].title}`);
-            }
-            metaHtml = `<div class="game-meta">${metaParts.join(' · ')}</div>`;
+            const chain = lineageChain(gameId);
+            const links = chain.map(id => {
+                const data = games[id] || {};
+                const cls = id === gameId ? 'chain-link current' : 'chain-link';
+                const onclick = id === gameId ? '' : `onclick="launchLineageGame('${id}', event)"`;
+                const safeTitle = (data.title || id).replace(/"/g, '&quot;');
+                return `<span class="${cls}" ${onclick} title="${safeTitle}">v${data.version || '?'}</span>`;
+            });
+            metaHtml = `<div class="game-meta chain">${links.join('<span class="chain-arrow">→</span>')}</div>`;
         }
 
         gameItem.innerHTML = `
             ${deleteButtonHtml}
             ${stopButtonHtml}
+            ${runningBadgeHtml}
             <div class="game-title">${gameData.title}</div>
             ${metaHtml}
             ${gameErrorHtml}

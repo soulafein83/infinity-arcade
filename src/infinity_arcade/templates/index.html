@@ -212,6 +212,20 @@
         </button>
     </div>
     
+    <!-- Code Viewer (built-in source code display) -->
+    <div id="codeViewer" class="code-viewer" style="display: none;">
+        <div class="code-viewer-content">
+            <div class="code-viewer-header">
+                <span id="codeViewerTitle" class="code-viewer-title"></span>
+                <div class="code-viewer-actions">
+                    <button class="code-viewer-btn" id="copyCodeBtn" onclick="copyCode()">Copy</button>
+                    <button class="code-viewer-btn" onclick="closeCodeViewer()" title="Close">×</button>
+                </div>
+            </div>
+            <pre id="codeViewerCode" class="code-viewer-code"></pre>
+        </div>
+    </div>
+    
     <script src="/static/app.js"></script>
 </body>
 </html>
