@@ -1,5 +1,6 @@
 import json
 import logging
+import shutil
 import time
 from pathlib import Path
 from typing import AsyncGenerator
@@ -132,6 +133,37 @@ class GameOrchestrator:
         ):
             yield item
 
+    def _backup_game_file(self, game_id: str, game_file: Path, reason: str) -> None:
+        """Snapshot the game file before an auto-fix overwrites it.
+
+        Backups are stored in ~/.infinity-arcade/backups/ as
+        {game_id}.v{n}.py plus a .meta.json sidecar (timestamp + fix reason).
+        """
+        try:
+            backup_dir = self.storage.games_dir.parent / "backups"
+            backup_dir.mkdir(parents=True, exist_ok=True)
+            backup_version = 1
+            while (backup_dir / f"{game_id}.v{backup_version}.py").exists():
+                backup_version += 1
+            backup_file = backup_dir / f"{game_id}.v{backup_version}.py"
+            shutil.copy2(game_file, backup_file)
+            meta_file = backup_dir / f"{game_id}.v{backup_version}.meta.json"
+            meta_file.write_text(
+                json.dumps(
+                    {
+                        "game_id": game_id,
+                        "backed_up_from": str(game_file),
+                        "created": time.time(),
+                        "reason": reason[:2000],
+                    },
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+            logger.debug(f"Backed up game {game_id} to {backup_file} (v{backup_version})")
+        except Exception as e:
+            logger.warning(f"Failed to back up game {game_id} before auto-fix: {e}")
+
     async def launch_game_with_auto_fix_streaming(
         self, game_id: str, game_title: str, max_retries: int = 1
     ) -> AsyncGenerator[str, None]:
@@ -193,6 +225,8 @@ class GameOrchestrator:
                             yield f"data: {json.dumps({'type': 'content', 'content': result})}\n\n"
 
                     if fixed_code:
+                        # Keep the pre-fix version before overwriting the game file
+                        self._backup_game_file(game_id, game_file, error_message)
                         game_file.write_text(fixed_code, encoding="utf-8")
                         retry_count += 1
                         continue

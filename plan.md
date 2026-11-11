@@ -1,6 +1,7 @@
 # Plan ulepszeń — Infinity Arcade (fork `soulafein83/infinity-arcade`)
 
-> Stan: propozycje, **nic jeszcze nie zmieniono**. Prioritety: 🔴 wysokie (wpływ na stabilność/jakość gier), 🟡 średnie (UX/komfort), 🟢 niskie (porządek, przyszłość).
+> Stan: **wykonano 1.1, 2.1, 2.3, 2.4** (commity Partii A i B), reszta: propozycje.
+> Prioritety: 🔴 wysokie (wpływ na stabilność/jakość gier), 🟡 średnie (UX/komfort), 🟢 niskie (porządek, przyszłość).
 >
 > Zasady forka: rozwijany oddzielnie od upstreamu (`lemonade-sdk/infinity-arcade`),
 > praca wyłącznie na forku, własny Lemonade Server (127.0.0.1:13305) — aplikacja
@@ -10,7 +11,7 @@
 
 ## 1. Cykl życia procesów gier 🔴
 
-### 1.1. Obsługa SIGTERM w aplikacji
+### 1.1. Obsługa SIGTERM w aplikacji ✅
 **Problem:** `main()` czyści uruchomione gry tylko przy `KeyboardInterrupt` (Ctrl+C).
 `kill <pid>` (SIGTERM) zabija aplikację, a **dzieci (procesy gier) zostają osierocone** —
 stwierdzone empirycznie (gra `a5dc07da` żyła po zamknięciu aplikacji).
@@ -41,7 +42,7 @@ ale brak marasy API).
 
 ## 2. Jakość generowania kodu przez LLM 🔴
 
-### 2.1. Wykrywanie ucięcia odpowiedzi (finish_reason)
+### 2.1. Wykrywanie ucięcia odpowiedzi (finish_reason) ✅
 **Problem:** `max_tokens=16000` pomaga, ale jeśli odpowiedź i tak się utnie,
 model nie domknie bloku ```python — wyekstrakowany kod jest niekompletny,
 a gra dostaje auto-fix, który często nie daje rady.
@@ -61,7 +62,7 @@ które spalone są z `max_tokens` przed właściwym kodem.
 - Tytuł: `max_tokens: 800` jest bezpieczne, ale dla non-thinking można spaść do ~100;
   dla thinking zostawić 800 — ustawić świadomie per tryb, nie „na oko”.
 
-### 2.3. Lepsze prompty (wnioski z sesji z Pongiem)
+### 2.3. Lepsze prompty (wnioski z sesji z Pongiem) ✅
 - **Tryb `create`:** dodać do system promptu sekcję o wymaganej geometrii gry
   (opis ekranu, osi, ścian vs krawędzie punktowe) — zapobiega zamianie osi,
   która kosztowała jeden pełny remix.
@@ -72,7 +73,7 @@ które spalone są z `max_tokens` przed właściwym kodem.
   stderr gry (z pliku logów z pkt 1.2) — model dostaje pełniejszy kontekst.
 - Opcjonalnie: limit wielkości („maks. ~300 linii”) żeby kod mieścił się w budżecie.
 
-### 2.4. Backup przed auto-fixem
+### 2.4. Backup przed auto-fixem ✅
 **Problem:** auto-fix **nadpisuje** plik gry z tym samym `game_id` — poprzednia
 wersja kodu znika.
 

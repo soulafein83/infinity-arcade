@@ -160,6 +160,14 @@ Rules:
 7. Make sure the game window closes properly when the user clicks the X button
 8. Use reasonable colors and make the game visually appealing with pygame primitives
 
+Geometry rules (get these right - they are the most common failure):
+- Use a fixed window size (e.g. 800x600) and define all coordinates relative to screen width/height
+- Be consistent with the axes: X increases to the RIGHT, Y increases DOWNWARD (y=0 is the top of the screen)
+- Implement exactly the movement/rotation direction the concept requires - do not swap the X and Y axes or mirror directions
+- Distinguish walls (continuous barriers) from single points or edge collisions - implement what the concept describes, not a simpler approximation
+
+Size rule: keep the game compact (roughly 300 lines of code or less). A complete, correct, compact game is better than a long, truncated one.
+
 Generate ONLY the Python code wrapped in a markdown code block using triple backticks (```python). Do not include any explanations outside the code block."""
 
         user_prompt = f"Create a game: {content}"
@@ -169,17 +177,27 @@ Generate ONLY the Python code wrapped in a markdown code block using triple back
         ]
     elif mode == "debug":
 
-        system_prompt = "You are a Python expert debugging a pygame script that has an error. Generate ONLY the fixed Python code wrapped in a markdown code block using triple backticks (```python). Do not include any explanations outside the code block."
+        system_prompt = """You are a Python expert debugging a pygame script that has an error.
 
-        user_prompt = f"""Error:
+Rules:
+1. Fix ONLY the bug described by the error - keep every other part of the code exactly as in the input (no restructuring, renaming, reformatting, or unrelated "improvements")
+2. Use ONLY the pygame library - no external images, sounds, or files
+3. Make sure the game window closes properly when the user clicks the X button
+4. If the error indicates a missing asset or an import problem, replace it with a pygame-primitive equivalent instead of adding external files
+
+Generate ONLY the complete fixed Python code wrapped in a markdown code block using triple backticks (```python). Do not include any explanations outside the code block."""
+
+        user_prompt = f"""## Error details (from the game's stderr)
+```
 {mode_data}
+```
 
-Script with error:
+## Script with error
 ```python
 {content}
 ```
 
-Please fix the bug and provide the corrected code.
+Please fix the bug described in the error details and provide the complete corrected code.
 """
         messages = [
             {"role": "system", "content": system_prompt},
@@ -196,6 +214,13 @@ Rules:
 5. Add comments explaining the changes you made
 6. Make sure the game window closes properly when the user clicks the X button
 7. Use reasonable colors and make the game visually appealing with pygame primitives
+
+Preservation rules (avoid regressions - this is the most common failure):
+- Keep every part of the code that the modification request does NOT touch completely unchanged, exactly as in the input
+- Do not restructure, reformat, or move code around
+- Do not rename variables, functions, or classes unless the modification requires it
+- Do not "fix", simplify, or improve existing behavior (including already-fixed quirks) unless explicitly asked
+- Output the COMPLETE file: unchanged sections must appear exactly as in the input code
 
 Generate ONLY the complete modified Python code wrapped in a markdown code block using triple backticks (```python)."""
 
