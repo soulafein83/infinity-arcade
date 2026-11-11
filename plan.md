@@ -207,7 +207,7 @@ W forku wiele rzeczy jest zaszytych — warto wydostać do konfiguracji
 
 ## 8. Poprawki CI (poza planem) 🟢 ✅
 
-Po §7 dwa workflowy dziedziczone z upstreamu wciąż padały na każdym pushu:
+Po §7 trzy workflowy dziedziczone z upstreamu padały na każdym pushu:
 
 - `Run LemonadeClient Tests` — ściąga i instaluje lemonade-server na runnerze
   i odpala testy integracyjne wymagające żywego serwera z modelem. Sprzeczne z
@@ -223,6 +223,11 @@ Po §7 dwa workflowy dziedziczone z upstreamu wciąż padały na każdym pushu:
 **Wykonanie:**
 - Usunięto `.github/workflows/test_lemonade_client.yml` (unit testy
   `lemonade_client_unit.py` i tak leżą w naszym workflow `CI`).
+- Usunięto `.github/workflows/publish-website.yml` — workflow dziedziczony z
+  upstreamu publikujący stronę infinity-arcade.com (domena upstreamu);
+  fork nie ma włączonego GitHub Pages, a bot nie miał uprawnień zapisu
+  (ustawienie "Workflow permissions" konta osobistego nie da się zmienić
+  przez API). Gałąź `website` zostawiona — nie przeszkadza.
 - Fixy pylint: usunięto `Optional` z importów, `dict(...)` → dosłownik w
   `generate_game_code_with_llm`, `thinking_enabled`/`max_retries`
   zainicjalizowane w `ArcadeApp.__init__` (nadpisywane w
