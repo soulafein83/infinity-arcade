@@ -91,6 +91,10 @@ class ArcadeApp:
         self.required_model_size = None
         self.llm_service = None
         self.orchestrator = None
+        # Defaults; actual values are resolved in initialize_model_and_services
+        # (overridable via INFINITY_ARCADE_THINKING / INFINITY_ARCADE_MAX_RETRIES)
+        self.thinking_enabled = False
+        self.max_retries = 1
 
         # FastAPI app and resources
         self.app = FastAPI(title="Infinity Arcade", version="0.1.0")
@@ -680,7 +684,7 @@ def main(port: int | None = None, open_browser: bool = True):
 
     # SIGTERM (e.g. `kill <pid>`) must run the same cleanup as Ctrl+C,
     # otherwise child game processes are left orphaned
-    def handle_sigterm(signum, frame):
+    def handle_sigterm(_signum, _frame):
         # Interrupt the main loop's sleep; cleanup happens in `finally`
         stop_requested["flag"] = True
 

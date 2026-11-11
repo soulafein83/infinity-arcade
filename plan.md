@@ -1,6 +1,6 @@
 # Plan ulepszeń — Infinity Arcade (fork `soulafein83/infinity-arcade`)
 
-> Stan: **wykonano 1.1, 1.2, 1.3, 2.1, 2.2, 2.3, 2.4, 2.5, 3.1, 3.2, 4, 5, 6, 7** (commity Partii A–D + 3.2 + 4 + 2.2 + 6 + 2.5 + 7), reszta: propozycje.
+> Stan: **wykonano 1.1, 1.2, 1.3, 2.1, 2.2, 2.3, 2.4, 2.5, 3.1, 3.2, 4, 5, 6, 7, 8** (commity Partii A–D + 3.2 + 4 + 2.2 + 6 + 2.5 + 7 + 8), reszta: propozycje.
 > Prioritety: 🔴 wysokie (wpływ na stabilność/jakość gier), 🟡 średnie (UX/komfort), 🟢 niskie (porządek, przyszłość).
 >
 > Zasady forka: rozwijany oddzielnie od upstreamu (`lemonade-sdk/infinity-arcade`),
@@ -202,6 +202,32 @@ W forku wiele rzeczy jest zaszytych — warto wydostać do konfiguracji
   `TestFinishedGamesMiddleware` (2 testy: middleware usuwa skończone gry a
   zostawia uruchomione + zarejestrowany dokładnie raz) w `test/main_unit.py`.
   Lokalnie: 89 passed, 5 skipped.
+
+---
+
+## 8. Poprawki CI (poza planem) 🟢 ✅
+
+Po §7 dwa workflowy dziedziczone z upstreamu wciąż padały na każdym pushu:
+
+- `Run LemonadeClient Tests` — ściąga i instaluje lemonade-server na runnerze
+  i odpala testy integracyjne wymagające żywego serwera z modelem. Sprzeczne z
+  zasadą forka (nie startujemy serwera, nie pobieramy modeli) i bez sensu w
+  CI — testy integracyjne mają sens tylko lokalnie, wobec własnego serwera
+  użytkownika.
+- `Lint Python Code` — pylint zgłaszał 6 błędów (exit code 12), wszystkie z
+  kodu epoki forka: nieużywany `Optional` w `game_launcher.py`,
+  `use-dict-literal` w `llm_service.py`, `thinking_enabled`/`max_retries`
+  definiowane poza `__init__` (§2.5, §4), nieużywane parametry handlera
+  SIGTERM.
+
+**Wykonanie:**
+- Usunięto `.github/workflows/test_lemonade_client.yml` (unit testy
+  `lemonade_client_unit.py` i tak leżą w naszym workflow `CI`).
+- Fixy pylint: usunięto `Optional` z importów, `dict(...)` → dosłownik w
+  `generate_game_code_with_llm`, `thinking_enabled`/`max_retries`
+  zainicjalizowane w `ArcadeApp.__init__` (nadpisywane w
+  `initialize_model_and_services`), parametry sygnału → `_signum, _frame`.
+- Pylint: 9.96 → **10.00/10**; testy bez zmian: 89 passed, 5 skipped.
 
 ---
 

@@ -324,14 +324,14 @@ Provide the complete modified game code."""
             timeout=600.0,
         )
 
-        create_kwargs = dict(
-            model=model,
-            messages=messages,
-            stream=True,
-            max_tokens=16000,
-            temperature=0.3,
-            top_p=0.9,
-        )
+        create_kwargs = {
+            "model": model,
+            "messages": messages,
+            "stream": True,
+            "max_tokens": 16000,
+            "temperature": 0.3,
+            "top_p": 0.9,
+        }
         # Without reasoning tokens, the whole max_tokens budget goes to the
         # actual code (verified on Qwen3.5-9B-GGUF)
         if no_thinking:
