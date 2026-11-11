@@ -15,8 +15,8 @@ import httpx
 # Model information: (model_name, size_gb)
 MODELS = {
     "high_end": ("Qwen3-Coder-30B-A3B-Instruct-GGUF", 18.6),
-    "npu": ("Playable1-GGUF", 4.68),
-    "default": ("Playable1-GGUF", 4.68),
+    "npu": ("Playable1-GGUF-Q4_K_M", 4.68),
+    "default": ("Qwen3.5-9B-MTP-GGUF-UD-Q4_K_XL", 6.57),
 }
 
 
@@ -39,7 +39,7 @@ class LemonadeClient:
             logger if logger is not None else logging.getLogger("lemonade_client")
         )
 
-        self.url = "http://localhost:8000"
+        self.url = "http://127.0.0.1:13305"
 
     def is_pyinstaller_environment(self):
         """
@@ -201,8 +201,15 @@ class LemonadeClient:
                         ]
                     )
             else:
-                # Linux/Unix: Try lemonade-server command
-                commands_to_try.append(["lemonade-server"] + args)
+                # Linux/Unix: Try lemonade-server command, then fall back to
+                # the Lemonade CLI ("lemonade") when the server binary is not
+                # in PATH (e.g. server installed as a system service).
+                commands_to_try.extend(
+                    [
+                        ["lemonade-server"] + args,
+                        ["lemonade"] + args,
+                    ]
+                )
 
         for i, cmd in enumerate(commands_to_try):
             try:

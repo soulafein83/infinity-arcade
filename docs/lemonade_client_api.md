@@ -74,7 +74,7 @@ if not load_status["loaded"]:
 ```
 
 ### 5. Ready for Inference
-Once the above steps complete successfully, your application can make inference requests to `client.url` (default: `http://localhost:8000`) using the OpenAI-compatible API.
+Once the above steps complete successfully, your application can make inference requests to `client.url` (default: `http://127.0.0.1:13305`) using the OpenAI-compatible API.
 
 ---
 

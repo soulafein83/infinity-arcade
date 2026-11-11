@@ -136,8 +136,8 @@ Games are cached under the `.infinity-arcade` folder in your home directory.
 ## Troubleshooting
 
 ### "Server Offline" Status
-- Ensure Lemonade Server is running on `http://localhost:8000`.
-- Check that you have models installed in Lemonade Server by opening the model manager: http://localhost:8000/#model-management.
+- Ensure Lemonade Server is running on `http://127.0.0.1:13305`.
+- Check that you have models installed in Lemonade Server by opening the model manager: http://127.0.0.1:13305/#model-management.
 - Visit [lemonade-server.ai](https://lemonade-server.ai) for setup instructions.
 
 ### Game Won't Launch

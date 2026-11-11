@@ -62,7 +62,7 @@ Return ONLY the title, nothing else."""
                     "model": model,
                     "messages": messages,
                     "stream": False,
-                    "max_tokens": 20,
+                    "max_tokens": 800,
                     "temperature": 0.3,
                 },
                 headers={"Content-Type": "application/json"},
@@ -71,12 +71,14 @@ Return ONLY the title, nothing else."""
             if response.status_code == 200:
                 data = response.json()
                 if "choices" in data and len(data["choices"]) > 0:
-                    title = data["choices"][0]["message"]["content"].strip()
+                    title = (data["choices"][0]["message"]["content"] or "").strip()
                     title = title.strip("\"'").split("\n")[0].strip()
                     words = title.split()[:3]
                     final_title = " ".join(words)
-                    logger.debug(f"Generated title: {final_title}")
-                    return final_title
+                    if final_title:
+                        logger.debug(f"Generated title: {final_title}")
+                        return final_title
+                    logger.warning("Model returned an empty title, using fallback")
     except Exception as e:
         logger.warning(f"Failed to generate title: {e}")
 
@@ -233,7 +235,7 @@ Provide the complete modified game code."""
             model=model,
             messages=messages,
             stream=True,
-            max_tokens=4000,
+            max_tokens=16000,
             temperature=0.3,
             top_p=0.9,
         )

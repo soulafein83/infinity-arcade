@@ -27,7 +27,7 @@ class TestLemonadeClient(unittest.TestCase):
         client = LemonadeClient()
         self.assertIsNone(client.server_command)
         self.assertIsNone(client.server_process)
-        self.assertEqual(client.url, "http://localhost:8000")
+        self.assertEqual(client.url, "http://127.0.0.1:13305")
         self.assertEqual(client.minimum_version, "9.0.3")  # Default value
 
         # Test with custom minimum version
@@ -1147,7 +1147,7 @@ class TestLemonadeClient(unittest.TestCase):
         with patch.object(self.client, "get_system_info", return_value=system_info):
             model_name, size_gb = await self.client.select_model_for_hardware()
 
-            self.assertEqual(model_name, "Playable1-GGUF")
+            self.assertEqual(model_name, "Playable1-GGUF-Q4_K_M")
             self.assertEqual(size_gb, 4.68)
 
     async def test_select_model_for_hardware_default(self):
@@ -1164,8 +1164,8 @@ class TestLemonadeClient(unittest.TestCase):
         with patch.object(self.client, "get_system_info", return_value=system_info):
             model_name, size_gb = await self.client.select_model_for_hardware()
 
-            self.assertEqual(model_name, "Playable1-GGUF")
-            self.assertEqual(size_gb, 4.68)
+            self.assertEqual(model_name, "Qwen3.5-9B-MTP-GGUF-UD-Q4_K_XL")
+            self.assertEqual(size_gb, 6.57)
 
     async def test_select_model_for_hardware_system_info_failure(self):
         """Test model selection when system info fails."""
@@ -1173,8 +1173,8 @@ class TestLemonadeClient(unittest.TestCase):
             model_name, size_gb = await self.client.select_model_for_hardware()
 
             # Should return default model
-            self.assertEqual(model_name, "Playable1-GGUF")
-            self.assertEqual(size_gb, 4.68)
+            self.assertEqual(model_name, "Qwen3.5-9B-MTP-GGUF-UD-Q4_K_XL")
+            self.assertEqual(size_gb, 6.57)
 
 
 def run_async_test(coro):

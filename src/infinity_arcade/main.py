@@ -131,7 +131,7 @@ class ArcadeApp:
     def _register_routes(self) -> None:
         @self.app.get("/")
         async def root(request: Request):
-            return self.templates.TemplateResponse("index.html", {"request": request})
+            return self.templates.TemplateResponse(request, "index.html")
 
         @self.app.get("/favicon.ico")
         async def favicon():
