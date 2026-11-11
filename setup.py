@@ -21,6 +21,8 @@ setup(
         "jinja2>=3.1.0",
         "python-multipart>=0.0.6",
         "openai>=1.0.0",
+        # Fork: test suite (test/) is part of development workflow
+        "pytest>=8.0.0",
     ],
     entry_points={
         "console_scripts": [

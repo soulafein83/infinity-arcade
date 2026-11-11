@@ -159,12 +159,13 @@ Games and their artifacts are cached under the `.infinity-arcade` folder in your
 
 ## Testing
 
-Unit tests live in `test/` and can be run with pytest:
+Unit tests live in `test/` and can be run with pytest (installed with the package):
 
 ```bash
-pip install pytest
-pytest test/
+pytest test/ --ignore=test/lemonade_client_integration.py
 ```
+
+The integration tests require a live Lemonade Server and are excluded from CI.
 
 ## Troubleshooting
 

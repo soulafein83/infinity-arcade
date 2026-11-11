@@ -1,6 +1,6 @@
 # Plan ulepszeń — Infinity Arcade (fork `soulafein83/infinity-arcade`)
 
-> Stan: **wykonano 1.1, 1.2, 1.3, 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 4, 5** (commity Partii A–D + 3.2 + 4 + 2.2), reszta: propozycje.
+> Stan: **wykonano 1.1, 1.2, 1.3, 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 4, 5, 6** (commity Partii A–D + 3.2 + 4 + 2.2 + 6), reszta: propozycje.
 > Prioritety: 🔴 wysokie (wpływ na stabilność/jakość gier), 🟡 średnie (UX/komfort), 🟢 niskie (porządek, przyszłość).
 >
 > Zasady forka: rozwijany oddzielnie od upstreamu (`lemonade-sdk/infinity-arcade`),
@@ -148,7 +148,7 @@ W forku wiele rzeczy jest zaszytych — warto wydostać do konfiguracji
 
 ---
 
-## 6. Testy i CI 🟢
+## 6. Testy i CI 🟢 ✅
 
 - `pytest` nie jest w `install_requires` — dodać (wymaga zgody użytkownika).
 - Testy jednostkowe już istnieją (`test/lemonade_client_unit.py`, ~1200 linii) —
@@ -156,6 +156,16 @@ W forku wiele rzeczy jest zaszytych — warto wydostać do konfiguracji
 - GitHub Actions na forku: matrix Python, `pytest` na każdy push do `main`.
 - Testy dla `_extract_python_code` (przypadki: brak bloku, ucięty blok,
   bloki bez pygame, wiele bloków).
+
+**Wykonanie:**
+- `pytest>=8.0.0` dodany do `install_requires` (setup.py); `[tool.pytest.ini_options]`
+  w `pyproject.toml` (`testpaths`, wzorce `*_unit.py` itd.).
+- `test/llm_service_unit.py` + klasa `TestExtractPythonCode` (8 testów: brak bloku,
+  ucięty blok, blok bez pygame, ```python / ```py / gołe ```, wiele bloków —
+  wybór najdłuższego z pygame, case-insensitive pygame).
+- `.github/workflows/ci.yml`: matrix Python 3.10–3.13, `pytest test/` z pominięciem
+  `lemonade_client_integration.py` (testy integracyjne wymagają żywego Lemonade
+  Servera — forka go nie startuje). Lokalnie: 75 passed, 5 skipped (testy win-only).
 
 ---
 

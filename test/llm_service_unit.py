@@ -14,6 +14,7 @@ from infinity_arcade.llm_service import (
     TITLE_MAX_TOKENS_THINKING,
     ExtractedCode,
     LLMError,
+    _extract_python_code,
     generate_game_code_with_llm,
     generate_game_title,
 )
@@ -169,6 +170,62 @@ class TestCodeGeneration(unittest.TestCase):
         results, _ = self._run_create(True, chunks)
         errors = [r for r in results if isinstance(r, LLMError)]
         self.assertEqual(len(errors), 1)
+
+
+class TestExtractPythonCode(unittest.TestCase):
+    def test_no_code_block(self):
+        self.assertIsNone(_extract_python_code("No code here, just text."))
+
+    def test_truncated_block_missing_closing_fence(self):
+        response = (
+            "Here is the game:\n```python\nimport pygame\n\n"
+            "pygame.init()\n# response cut off here"
+        )
+        self.assertIsNone(_extract_python_code(response))
+
+    def test_block_without_pygame(self):
+        response = "```python\nimport sys\nprint(sys.argv)\n```"
+        self.assertIsNone(_extract_python_code(response))
+
+    def test_python_fenced_block(self):
+        response = (
+            "Sure!\n```python\nimport pygame\n\nclass Game:\n    pass\n```\nDone."
+        )
+        extracted = _extract_python_code(response)
+        self.assertIsInstance(extracted, ExtractedCode)
+        self.assertIn("import pygame", extracted.code)
+        self.assertEqual(extracted.length, len(extracted.code))
+
+    def test_py_fenced_block(self):
+        response = "```py\nimport pygame\npygame.init()\n```"
+        extracted = _extract_python_code(response)
+        self.assertIsInstance(extracted, ExtractedCode)
+        self.assertIn("pygame", extracted.code)
+
+    def test_bare_fenced_block(self):
+        response = "```\nimport pygame\npygame.quit()\n```"
+        extracted = _extract_python_code(response)
+        self.assertIsInstance(extracted, ExtractedCode)
+        self.assertIn("pygame", extracted.code)
+
+    def test_multiple_blocks_picks_longest_pygame(self):
+        long_code = "import pygame\n\n" + "\n".join(
+            f"# line {i} for logic" for i in range(20)
+        )
+        response = (
+            "Short one:\n```python\nimport pygame\n```\n\n"
+            f"Longer one:\n```python\n{long_code}\n```\n\n"
+            "Ignored one:\n```python\nimport sys\nprint('no pygame')\n```\n"
+        )
+        extracted = _extract_python_code(response)
+        self.assertIsInstance(extracted, ExtractedCode)
+        self.assertIn("# line 19", extracted.code)
+        self.assertEqual(extracted.length, len(long_code.strip()))
+
+    def test_case_insensitive_pygame_match(self):
+        response = "```python\nimport PyGame\n```"
+        extracted = _extract_python_code(response)
+        self.assertIsInstance(extracted, ExtractedCode)
 
 
 if __name__ == "__main__":

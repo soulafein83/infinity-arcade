@@ -6,3 +6,8 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 
+[tool.pytest.ini_options]
+testpaths = ["test"]
+python_files = ["test_*.py", "*_test.py", "*_unit.py", "*_integration.py"]
+
+
