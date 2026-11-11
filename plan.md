@@ -1,6 +1,6 @@
 # Plan ulepszeń — Infinity Arcade (fork `soulafein83/infinity-arcade`)
 
-> Stan: **wykonano 1.1, 1.2, 1.3, 2.1, 2.3, 2.4** (commity Partii A–C), reszta: propozycje.
+> Stan: **wykonano 1.1, 1.2, 1.3, 2.1, 2.3, 2.4, 3.1, 3.2, 5** (commity Partii A–D), reszta: propozycje.
 > Prioritety: 🔴 wysokie (wpływ na stabilność/jakość gier), 🟡 średnie (UX/komfort), 🟢 niskie (porządek, przyszłość).
 >
 > Zasady forka: rozwijany oddzielnie od upstreamu (`lemonade-sdk/infinity-arcade`),
@@ -97,7 +97,7 @@ do kolejnego remiksu (stąd reguła „remiksuj od najnowszej”).
 **Propozycja:** pola `"parent_game_id"` i `"version"` w `metadata.json`;
 UI pokazuje drzewo/łańcuch wersji; remix domyślnie z najnowszej wersji łańcucha.
 
-### 3.2. Porządki
+### 3.2. Porządki ✅
 - `DELETE /api/delete-game` nie czyszczy backupów (po 2.4) ani logów — dodać.
 - `metadata.json` zapisywany bez blokady/atomarnie — przy większej liczbie gier
   napisać atomarnie (tmp + `os.replace`).

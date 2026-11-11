@@ -476,11 +476,8 @@ class ArcadeApp:
                 )
             if game_id in self.game_launcher.running_games:
                 self.game_launcher.stop_game(game_id)
-            game_file = self.arcade_games.games_dir / f"{game_id}.py"
-            if game_file.exists():
-                game_file.unlink()
-            del self.arcade_games.game_metadata[game_id]
-            self.arcade_games.save_metadata()
+            # Also removes the game's auto-fix backups and per-game log
+            self.arcade_games.delete_game(game_id)
             return JSONResponse({"success": True})
 
         @self.app.get("/api/game-metadata/{game_id}")

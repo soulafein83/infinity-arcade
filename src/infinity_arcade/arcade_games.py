@@ -1,5 +1,6 @@
 import logging
 import json
+import os
 from pathlib import Path
 from typing import Dict
 
@@ -20,6 +21,10 @@ class ArcadeGames:
         # Global state
         self.games_dir = Path.home() / ".infinity-arcade" / "games"
         self.game_metadata: Dict[str, Dict] = {}
+
+        # Per-game artifacts keyed by game_id (created on demand, not here)
+        self.backup_dir = self.games_dir.parent / "backups"
+        self.log_dir = self.games_dir.parent / "logs"
 
         # Ensure games directory exists
         self.games_dir.mkdir(parents=True, exist_ok=True)
@@ -57,12 +62,35 @@ class ArcadeGames:
                 self.game_metadata[game_id] = game_data.copy()
 
     def save_metadata(self):
-        """Save game metadata to disk."""
+        """Save game metadata to disk atomically (tmp file + os.replace),
+        so a crash mid-write never leaves a truncated metadata.json behind."""
         try:
-            with open(self.metadata_file, "w", encoding="utf-8") as f:
+            tmp_file = self.metadata_file.with_suffix(".json.tmp")
+            with open(tmp_file, "w", encoding="utf-8") as f:
                 json.dump(self.game_metadata, f, indent=2)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp_file, self.metadata_file)
         except Exception as e:
             print(f"Error saving metadata: {e}")
+
+    def delete_game(self, game_id: str) -> None:
+        """Remove a game: its .py file, its auto-fix backups, its log file,
+        and its metadata entry."""
+        game_file = self.games_dir / f"{game_id}.py"
+        if game_file.exists():
+            game_file.unlink()
+        # Backups ({game_id}.v{n}.py + .meta.json) and the per-game log
+        # ({game_id}.log) are all keyed by game_id
+        for extra_dir in (self.backup_dir, self.log_dir):
+            if extra_dir.is_dir():
+                for path in extra_dir.glob(f"{game_id}.*"):
+                    try:
+                        path.unlink()
+                    except FileNotFoundError:
+                        pass
+        del self.game_metadata[game_id]
+        self.save_metadata()
 
     # Storage helpers
     def save_game_file(self, game_id: str, code: str) -> Path:
