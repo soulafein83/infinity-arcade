@@ -1,52 +1,44 @@
 
 <pre align="center">
 ██╗███╗   ██╗███████╗██╗███╗   ██╗██╗████████╗██╗   ██╗
-██║████╗  ██║██╔════╝██║████╗  ██║██║╚══██╔══╝╚██╗ ██╔╝
-██║██╔██╗ ██║█████╗  ██║██╔██╗ ██║██║   ██║    ╚████╔╝ 
-██║██║╚██╗██║██╔══╝  ██║██║╚██╗██║██║   ██║     ╚██╔╝  
-██║██║ ╚████║██║     ██║██║ ╚████║██║   ██║      ██║   
-╚═╝╚═╝  ╚═══╝╚═╝     ╚═╝╚═╝  ╚═══╝╚═╝   ╚═╝      ╚═╝   
-
- █████╗ ██████╗  ██████╗ █████╗ ██████╗ ███████╗
-██╔══██╗██╔══██╗██╔════╝██╔══██╗██╔══██╗██╔════╝
-███████║██████╔╝██║     ███████║██║  ██║█████╗  
-██╔══██║██╔══██╗██║     ██╔══██║██║  ██║██╔══╝  
-██║  ██║██║  ██║╚██████╗██║  ██║██████╔╝███████╗
-╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝╚═════╝ ╚══════╝
+██║████╗  ██║██╔════╝██║███╗   ██║██║╚██╔══╝██║██║ ██╔╝
+██║██╔██╗ ██║█████╗  ██║██╔══╗ ██║██║ ╚═█║ ███████║
+██║██║╚██╗██║██╔══╝  ██║██╔══╝██║██║ ██╔╝ ╚════██║
+██║██║ ╚████║███████╗████║████╗  ██║██║██╔╝ ███████╔╝
+╚═╝╚═╝  ╚═══╝╚══════╝╚═══╝╚═══╝  ╚═╝╚═╝╚═╝   ╚══════╝
 </pre>
 
 <p align="center">
   <a href="https://discord.gg/5xXzkMu8Zk">
     <img src="https://img.shields.io/badge/Discord-7289DA?logo=discord&logoColor=white" alt="Discord" /></a>
-  <a href="docs/README.md#installation" title="Check out our instructions">
-    <img src="https://img.shields.io/badge/Windows-11-0078D6?logo=windows&logoColor=white" alt="Windows 11" /></a>
   <a href="https://lemonade-server.ai/#linux" title="Ubuntu 24.04 & 25.04 Supported">
     <img src="https://img.shields.io/badge/Ubuntu-24.04%20%7C%2025.04-E95420?logo=ubuntu&logoColor=white" alt="Ubuntu 24.04 | 25.04" /></a>
-  <a href="#installation" title="Check out our instructions">
+  <a href="https://lemonade-server.ai/">
     <img src="https://img.shields.io/badge/Python-3.10--3.13-blue?logo=python&logoColor=white" alt="Made with Python" /></a>
-  <a href="https://github.com/lemonade-sdk/infinity-arcade/releases/latest" title="Download the latest release">
-    <img src="https://img.shields.io/github/v/release/lemonade-sdk/infinity-arcade?include_prereleases" alt="Latest Release" /></a>
-  <a href="https://tooomm.github.io/github-release-stats/?username=lemonade-sdk&repository=infinity-arcade">
-    <img src="https://img.shields.io/github/downloads/lemonade-sdk/infinity-arcade/total.svg" alt="GitHub downloads" /></a>
-  <a href="https://github.com/lemonade-sdk/infinity-arcade/blob/main/LICENSE">
+  <a href="https://github.com/soulafein83/infinity-arcade">
+    <img src="https://img.shields.io/badge/fork-soulafein83-infinity--arcade-lightgrey" alt="Fork badge" /></a>
+  <a href="https://github.com/soulafein83/infinity-arcade/blob/main/LICENSE">
     <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT" /></a>
-  <a href="https://star-history.com/#lemonade-sdk/infinity-arcade">
-    <img src="https://img.shields.io/badge/Star%20History-View-brightgreen" alt="Star History Chart" /></a>
 </p>
 
 Create playable retro-style games with LLMs in minutes! Enter your prompt and your game pops open, it's that simple.
+
+> **Fork of [lemonade-sdk/infinity-arcade](https://github.com/lemonade-sdk/infinity-arcade), developed independently.**
+> Key differences from upstream: the app **never starts the Lemonade Server** and **never downloads models** —
+> it connects to your own Lemonade Server and uses the models you manage there. Everything is configurable
+> via environment variables (see [Configuration](#configuration)).
 
 Push your imagination to the limit, it's 100% free and local.
 
 ![Infinity Arcade GIF](https://github.com/lemonade-sdk/assets/blob/main/arcade/infinity-arcade-demo.gif?raw=true)
 
-
 ## Hardware Requirement
 
-Infinity Arcade will detect the hardware you have available and load a recommended LLM.
+Infinity Arcade will detect the hardware you have available and suggest a model; in this fork you can override
+any model via environment variables (see [Configuration](#configuration)).
 
-| Configuration | GPU/APU | Memory | Disk Space | LLM |
-|---------------|---------|---------|---------|---------|
+| Configuration | GPU/APU | Memory | Disk Space | Suggested LLM |
+|---------------|---------|---------|------------|---------------|
 | **Minimum (CPU)** | Ryzen AI 7000-series chip or newer | 32 GB RAM | 5 GB | [Playable1-GGUF](https://huggingface.co/playable/Playable1-GGUF) |
 | **Suggested (iGPU)** | Ryzen AI 300-series chip or newer | 32 GB RAM | 5 GB | [Playable1-GGUF](https://huggingface.co/playable/Playable1-GGUF) |
 | **Suggested (dGPU)** | Radeon 7800XT or newer | 16 GB VRAM | 20 GB | Qwen3-Coder-30B |
@@ -54,59 +46,74 @@ Infinity Arcade will detect the hardware you have available and load a recommend
 
 ## Quick Start
 
-
-<p align="center">Windows: click this:</p>
-<p align="center">
-   <a href="https://github.com/lemonade-sdk/infinity-arcade/releases/latest/download/InfinityArcade.exe"><img src=img/icon.ico?raw=true alt="Arcade Quick Start"/></a>
-</p>
-
-<p align="center">
-   Linux: click <a href="#linux-and-windows-devs">this</a>
-</p>
-
-## Overview
-
-Infinity Arcade combines the convenience of a ChatGPT-like interface with the concept of a game emulator. Instead of emulating existing games, it uses LLMs (served by [Lemonade](https://github.com/lemonade-sdk/lemonade)) to generate completely new games based on your prompts, then lets you play them instantly.
-
-## Features
-
-- **Lemonade integration**: automatically connects to Lemonade Server and has access to any Lemonade LLM.
-- **AI Game Generation**: Describe a game concept and watch as an LLM creates a playable Python game.
-- **Game Library**: All generated games are saved and can be replayed anytime.
-- **Easy Management**: View game source code, copy prompts for remixing, and delete games you don't want with a simple click.
-
-## Installation
-
-### Windows
-
-Navigate to the [Releases page](https://github.com/lemonade-sdk/infinity-arcade/releases), download the .exe, and get started!
-
 ### Linux (and Windows Devs)
-
-From PyPI (recommended):
-
-```bash
-pip install infinity-arcade
-infinity-arcade
-```
-
-From Source:
 
 1. Clone this repository:
    ```bash
-   git clone https://github.com/lemonade-sdk/infinity-arcade
+   git clone https://github.com/soulafein83/infinity-arcade
    cd infinity-arcade
    ```
 
 2. Install the package:
    ```bash
+   python -m venv .venv
+   source .venv/bin/activate
    pip install -e .
    ```
 
-3. Run it:
+3. Make sure **your own Lemonade Server** is running and has at least one model installed
+   (default: `http://127.0.0.1:13305`, model management at `http://127.0.0.1:13305/#model-management`).
+   The app does **not** install or start the server — it only reports its status.
+
+4. Run it:
    ```bash
    infinity-arcade
    ```
+
+   The web UI opens at `http://127.0.0.1:8081`.
+
+> Windows quick start (upstream binary): see the
+> [original repository's releases](https://github.com/lemonade-sdk/infinity-arcade/releases).
+
+## Features
+
+- **Your own Lemonade Server**: connects to the Lemonade Server you already run; models are managed by you
+  in the server's model manager (nothing is downloaded or started by this app).
+- **AI Game Generation**: Describe a game concept and watch as an LLM creates a playable Python game.
+- **Game Library**: All generated games are saved and can be replayed anytime.
+- **Game control from the UI**: `● RUNNING` badge, **Stop** button, and the game's **last error** on each game card.
+- **Per-game logs**: every game's stdout/stderr is written to `~/.infinity-arcade/logs/{game_id}.log` and is
+  viewable via `GET /api/game-log/{game_id}` (last N lines + last error line).
+- **Source code viewer**: view any game's code in the browser (modal with copy button) without leaving the UI.
+- **Remix lineage**: games track their parents (`parent_game_id`, `version`) in `metadata.json`; the UI shows a
+  clickable chain of versions (oldest → newest), and remixes always build on the newest version in the chain.
+- **Safe auto-fix**: before an auto-fix overwrites a game, the previous version is backed up to
+  `~/.infinity-arcade/backups/{game_id}.v{n}.py`; deleting a game removes its backups and log too.
+- **Reliable generation**: truncated LLM responses (cut-off code blocks) are detected and reported as a clear
+  error instead of silently triggering a failing auto-fix.
+
+## Configuration
+
+| Setting | How | Default |
+|---|---|---|
+| Lemonade Server URL | `LEMONADE_URL` | `http://127.0.0.1:13305` |
+| Model (override any tier) | `LEMONADE_MODEL_HIGH_END`, `LEMONADE_MODEL_NPU`, `LEMONADE_MODEL_DEFAULT` | hardware-based selection |
+| Force one specific model | `INFINITY_ARCADE_MODEL` | hardware-based selection |
+| Thinking/reasoning mode | `INFINITY_ARCADE_THINKING=1` to enable | **off** (saves the token budget for the generated code) |
+| Web server port | `--port` CLI flag or `INFINITY_ARCADE_PORT` | `8081` |
+| Don't open the browser | `--no-browser` | browser opens at startup |
+| Log level | `--log-level {debug,info,warning,error}` | `info` |
+
+Example:
+
+```bash
+LEMONADE_URL=http://127.0.0.1:13305 \
+INFINITY_ARCADE_MODEL=Qwen3.5-9B-MTP-GGUF-UD-Q4_K_XL \
+infinity-arcade --port 8081 --no-browser
+```
+
+> Thinking mode is off by default because, on models with reasoning tokens (e.g. Qwen3.5-9B),
+> reasoning is deducted from `max_tokens` *before* the code is produced and can truncate the output.
 
 ## Architecture
 
@@ -119,29 +126,62 @@ Games are generated with the following constraints:
 - Proper event handling and game loops.
 - Visual appeal using pygame's built-in drawing functions.
 
-> Note: LLMs are imperfect, and may fail to generate the game you asked for or fail to generate a functioning game at all.
+The generation prompts (create / remix / debug) are tuned in this fork: explicit geometry rules to prevent
+swapped axes, strict "keep everything else unchanged" instructions for remixes, and the game's recent stderr
+lines included in debug requests so the model gets full context.
+
+### Game Lifecycle
+
+- Games run as child processes in their own session; stopping a game kills the whole process group
+  (`os.killpg`), and the app registers a SIGTERM handler so `kill <pid>` cleans up running games
+  exactly like Ctrl+C.
+- `POST /api/stop-game/{game_id}` stops a running game; the Stop button on the game card calls it.
 
 ### Game Cache
 
-Games are cached under the `.infinity-arcade` folder in your home directory.
+Games and their artifacts are cached under the `.infinity-arcade` folder in your home directory.
 
 ```
 ~/.infinity-arcade/
-└── games/
-    ├── metadata.json    # Game titles and descriptions
-    ├── abc12345.py      # Generated game files
-    └── xyz67890.py
+├── games/
+│   ├── metadata.json    # Titles, descriptions, parent_game_id, version
+│   ├── abc12345.py      # Generated game files
+│   └── xyz67890.py
+├── logs/
+│   ├── abc12345.log     # Per-game stdout/stderr
+│   └── xyz67890.log
+└── backups/
+    ├── abc12345.v1.py   # Pre-auto-fix backup of abc12345.py
+    └── abc12345.v2.py
+```
+
+`metadata.json` is written atomically (tmp file + `os.replace`), so a crash mid-write never corrupts it.
+
+## Testing
+
+Unit tests live in `test/` and can be run with pytest:
+
+```bash
+pip install pytest
+pytest test/
 ```
 
 ## Troubleshooting
 
 ### "Server Offline" Status
-- Ensure Lemonade Server is running on `http://127.0.0.1:13305`.
-- Check that you have models installed in Lemonade Server by opening the model manager: http://127.0.0.1:13305/#model-management.
+- The app never starts the server — make sure **you** have your Lemonade Server running on
+  `http://127.0.0.1:13305` (or set `LEMONADE_URL` to point elsewhere).
+- Check that you have models installed by opening the model manager: `http://127.0.0.1:13305/#model-management`.
 - Visit [lemonade-server.ai](https://lemonade-server.ai) for setup instructions.
 
+### "Code truncated" Error
+- The model ran out of tokens before closing its code block. The app now reports this explicitly
+  instead of silently auto-fixing broken code.
+- Try a simpler game concept, or enable `INFINITY_ARCADE_THINKING` is *not* the fix — keep thinking mode
+  off (default) so the full token budget goes to the code.
+
 ### Game Won't Launch
-- Check the generated code for any syntax errors.
+- Check the game's log: `~/.infinity-arcade/logs/{game_id}.log` (also shown as "last error" on the game card).
 - Try regenerating the game with a more specific prompt.
 
 ### Generation Failures
@@ -159,21 +199,19 @@ Here are some example prompts that work well:
 
 ## Contributing
 
-Contributions are welcome! Feel free to:
+Contributions are welcome:
+- Fork the repository and send a pull request to `main`.
 - Share interesting game prompts and results by opening an issue!
-- Report bugs or request features via GitHub issues.
-- Submit pull requests for improvements.
-
+- Report bugs and feature requests in the issues tracker.
 
 ## License and Attribution
 
-This project is licensed under the [MIT license](./LICENSE). It was built with Python with ❤️ for the gaming and LLM communities. It is built on the shoulders of many great open source tools, including llama.cpp, Hugging Face Hub, and OpenAI API.
-
-Most of the code for this project was generated by Claude Sonnet 4.
+This project is licensed under the [MIT license](./LICENSE) and derives from
+[lemonade-sdk/infinity-arcade](https://github.com/lemonade-sdk/infinity-arcade).
+It is built with Python with ❤️ for the gaming and LLM communities and stands on the shoulders of
+many other open source tools, including llama.cpp, Hugging Face Hub, and the OpenAI API.
 
 ## Maintainer
 
-This project is maintained by @jeremyfowers.
-
-
-<!--Copyright (c) 2025 AMD-->
+- Original project maintained by [@jeremyfowers](https://github.com/jeremyfowers).
+- This fork maintained by [@soulafein83](https://github.com/soulafein83).
