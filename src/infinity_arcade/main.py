@@ -94,6 +94,14 @@ class ArcadeApp:
 
         # FastAPI app and resources
         self.app = FastAPI(title="Infinity Arcade", version="0.1.0")
+
+        # Fork: finished games are cleaned up once per request from a
+        # single place (HTTP middleware) instead of repeating the call
+        # in every endpoint that needs fresh game state.
+        @self.app.middleware("http")
+        async def cleanup_finished_games(request: Request, call_next):
+            self.game_launcher.cleanup_finished_games()
+            return await call_next(request)
         self.static_dir = get_resource_path("static")
         self.templates_dir = get_resource_path("templates")
         self.templates = Jinja2Templates(directory=str(self.templates_dir))
@@ -218,7 +226,6 @@ class ArcadeApp:
 
         @self.app.get("/api/games")
         async def get_games():
-            self.game_launcher.cleanup_finished_games()
             return JSONResponse(self.arcade_games.game_metadata)
 
         @self.app.get("/api/installation-status")
@@ -436,7 +443,6 @@ class ArcadeApp:
 
         @self.app.post("/api/launch-game/{game_id}")
         async def launch_game_endpoint(game_id: str):
-            self.game_launcher.cleanup_finished_games()
             if self.game_launcher.running_games:
                 raise HTTPException(
                     status_code=400, detail="Another game is already running"
@@ -471,7 +477,6 @@ class ArcadeApp:
 
         @self.app.get("/api/game-status/{game_id}")
         async def game_status(game_id: str):
-            self.game_launcher.cleanup_finished_games()
             running = game_id in self.game_launcher.running_games
             return JSONResponse({"running": running})
 
@@ -499,7 +504,6 @@ class ArcadeApp:
 
         @self.app.post("/api/stop-game/{game_id}")
         async def stop_game_endpoint(game_id: str):
-            self.game_launcher.cleanup_finished_games()
             if game_id not in self.game_launcher.running_games:
                 raise HTTPException(status_code=404, detail="Game is not running")
             # stop_game blocks up to ~5 s, so run it off the event loop

@@ -1,7 +1,8 @@
 import logging
 import re
-import tempfile
 from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
 from typing import AsyncGenerator, Optional, Union
 
 import httpx
@@ -11,6 +12,12 @@ from lemonade_client import LemonadeClient
 
 
 logger = logging.getLogger("infinity_arcade.main")
+
+# Fork: full LLM responses are saved for debugging in a dedicated folder
+# next to the game cache (not in /tmp), keeping only the newest
+# LLM_RESPONSE_KEEP files so the history doesn't grow forever.
+LLM_RESPONSE_DIR = Path.home() / ".infinity-arcade" / "llm-responses"
+LLM_RESPONSE_KEEP = 20
 
 
 # Request kwargs that disable "thinking" (reasoning) tokens for models that
@@ -159,6 +166,34 @@ def _extract_python_code(llm_response: str) -> Optional[ExtractedCode]:
             f"Block {i+1} length: {len(block)}, starts with: {repr(block[:100])}"
         )
     return None
+
+
+def _save_llm_response(
+    full_response: str, mode: str, directory: Path | None = None
+) -> Optional[Path]:
+    """Save a full LLM response to the debug folder for later inspection.
+
+    Files are named with a sortable timestamp (newest last) and the
+    generation mode; only the newest LLM_RESPONSE_KEEP files are kept.
+    Returns the saved file's path, or None on failure (debugging must
+    never break generation).
+    """
+    directory = directory if directory is not None else LLM_RESPONSE_DIR
+    try:
+        directory.mkdir(parents=True, exist_ok=True)
+        filename = f"{datetime.now():%Y%m%dT%H%M%S_%f}_{mode}.txt"
+        response_path = directory / filename
+        response_path.write_text(full_response, encoding="utf-8")
+        # Prune the history: drop the oldest files beyond the limit
+        existing = sorted(directory.glob("*.txt"), key=lambda p: p.name)
+        for old_path in existing[:-LLM_RESPONSE_KEEP]:
+            old_path.unlink(missing_ok=True)
+        logger.info(f"DEBUG: Complete LLM response for {mode} mode saved to: {response_path}")
+        logger.debug(f"Full response length: {len(full_response)} characters")
+        return response_path
+    except Exception as e:
+        logger.error(f"Failed to save LLM response for debugging: {e}")
+        return None
 
 
 async def generate_game_code_with_llm(
@@ -317,22 +352,10 @@ Provide the complete modified game code."""
                     full_response += content_chunk
                     yield content_chunk
 
-        # Save the complete LLM response to a temporary file for debugging
-        try:
-            with tempfile.NamedTemporaryFile(
-                mode="w",
-                suffix=f"_llm_response_{mode}.txt",
-                delete=False,
-                encoding="utf-8",
-            ) as temp_file:
-                temp_file.write(full_response)
-                temp_file_path = temp_file.name
-            logger.info(
-                f"DEBUG: Complete LLM response for {mode} mode saved to: {temp_file_path}"
-            )
-            logger.debug(f"Full response length: {len(full_response)} characters")
-        except Exception as e:
-            logger.error(f"Failed to save LLM response to temp file: {e}")
+        # Save the complete LLM response for debugging (fork: kept under
+        # ~/.infinity-arcade/llm-responses/ with a limited history instead
+        # of a throwaway file in /tmp)
+        _save_llm_response(full_response, mode)
 
         # If the response hit the token limit, the code block is almost
         # certainly incomplete — report it explicitly instead of letting

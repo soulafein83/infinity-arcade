@@ -1,7 +1,9 @@
 import asyncio
 import os
 import sys
+import tempfile
 import unittest
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
@@ -14,7 +16,10 @@ from infinity_arcade.llm_service import (
     TITLE_MAX_TOKENS_THINKING,
     ExtractedCode,
     LLMError,
+    LLM_RESPONSE_DIR,
+    LLM_RESPONSE_KEEP,
     _extract_python_code,
+    _save_llm_response,
     generate_game_code_with_llm,
     generate_game_title,
 )
@@ -226,6 +231,40 @@ class TestExtractPythonCode(unittest.TestCase):
         response = "```python\nimport PyGame\n```"
         extracted = _extract_python_code(response)
         self.assertIsInstance(extracted, ExtractedCode)
+
+
+class TestSaveLlmResponse(unittest.TestCase):
+    def test_saves_response_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = _save_llm_response("import pygame\n", "create", Path(tmp))
+            self.assertIsNotNone(path)
+            self.assertTrue(path.exists())
+            self.assertEqual(path.read_text(encoding="utf-8"), "import pygame\n")
+            self.assertTrue(path.name.endswith("_create.txt"))
+
+    def test_creates_directory_if_missing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "nested" / "llm-responses"
+            path = _save_llm_response("import pygame", "remix", target)
+            self.assertIsNotNone(path)
+            self.assertTrue(path.parent.is_dir())
+
+    def test_prunes_oldest_files_beyond_limit(self):
+        extra = 5
+        with tempfile.TemporaryDirectory() as tmp:
+            for i in range(LLM_RESPONSE_KEEP + extra):
+                path = _save_llm_response(f"response {i}", "debug", Path(tmp))
+                self.assertIsNotNone(path)
+            files = sorted(Path(tmp).glob("*.txt"), key=lambda p: p.name)
+            self.assertEqual(len(files), LLM_RESPONSE_KEEP)
+            # The newest saved response must survive the pruning
+            newest = files[-1].read_text(encoding="utf-8")
+            self.assertEqual(newest, f"response {LLM_RESPONSE_KEEP + extra - 1}")
+
+    def test_default_directory_points_to_home_cache(self):
+        self.assertEqual(
+            LLM_RESPONSE_DIR, Path.home() / ".infinity-arcade" / "llm-responses"
+        )
 
 
 if __name__ == "__main__":

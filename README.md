@@ -137,6 +137,8 @@ lines included in debug requests so the model gets full context.
   (`os.killpg`), and the app registers a SIGTERM handler so `kill <pid>` cleans up running games
   exactly like Ctrl+C.
 - `POST /api/stop-game/{game_id}` stops a running game; the Stop button on the game card calls it.
+- Finished game processes are removed automatically before every API request
+  (a single HTTP middleware), so the "RUNNING" state always reflects reality.
 
 ### Game Cache
 
@@ -151,9 +153,11 @@ Games and their artifacts are cached under the `.infinity-arcade` folder in your
 ├── logs/
 │   ├── abc12345.log     # Per-game stdout/stderr
 │   └── xyz67890.log
-└── backups/
-    ├── abc12345.v1.py   # Pre-auto-fix backup of abc12345.py
-    └── abc12345.v2.py
+├── backups/
+│   ├── abc12345.v1.py   # Pre-auto-fix backup of abc12345.py
+│   └── abc12345.v2.py
+└── llm-responses/
+    └── 20250101T120000_create.txt   # Full LLM responses (debug, latest 20 kept)
 ```
 
 `metadata.json` is written atomically (tmp file + `os.replace`), so a crash mid-write never corrupts it.

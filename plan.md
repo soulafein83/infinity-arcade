@@ -1,6 +1,6 @@
 # Plan ulepszeń — Infinity Arcade (fork `soulafein83/infinity-arcade`)
 
-> Stan: **wykonano 1.1, 1.2, 1.3, 2.1, 2.2, 2.3, 2.4, 2.5, 3.1, 3.2, 4, 5, 6** (commity Partii A–D + 3.2 + 4 + 2.2 + 6 + 2.5), reszta: propozycje.
+> Stan: **wykonano 1.1, 1.2, 1.3, 2.1, 2.2, 2.3, 2.4, 2.5, 3.1, 3.2, 4, 5, 6, 7** (commity Partii A–D + 3.2 + 4 + 2.2 + 6 + 2.5 + 7), reszta: propozycje.
 > Prioritety: 🔴 wysokie (wpływ na stabilność/jakość gier), 🟡 średnie (UX/komfort), 🟢 niskie (porządek, przyszłość).
 >
 > Zasady forka: rozwijany oddzielnie od upstreamu (`lemonade-sdk/infinity-arcade`),
@@ -177,7 +177,7 @@ W forku wiele rzeczy jest zaszytych — warto wydostać do konfiguracji
 
 ---
 
-## 7. Drobiazgi 🟢
+## 7. Drobiazgi 🟢 ✅
 
 - `generate_game_id()`: 8 znaków UUID — kolizje praktycznie niemożliwe, OK.
 - `version.py`: podnieść wersję w forku, żeby odróżnić buildy.
@@ -185,6 +185,23 @@ W forku wiele rzeczy jest zaszytych — warto wydostać do konfiguracji
   do `~/.infinity-arcade/llm-responses/` z limitowaną historią.
 - `cleanup_finished_games` wywoływany w wielu endpointach — OK, ale przyda się
   jedno miejsce (middleware) zamiast powielania.
+
+**Wykonanie:**
+- `version.py`: `0.3.0` → `0.4.0` (odróżnia buildy forka od upstreamu).
+- Debug odpowiedzi LLM: nowa funkcja `_save_llm_response` w `llm_service.py` —
+  pełna odpowiedź trafia do `~/.infinity-arcade/llm-responses/`
+  (nazwa `YYYYMMDDTHHMMSS_µs_{mode}.txt`, sortowalna), historia ograniczona do
+  najnowszych `LLM_RESPONSE_KEEP = 20` plików; `import tempfile` usunięty
+  (pozostałe użycia są w `lemonade_client.py` i nie dotyczą LLM).
+- `cleanup_finished_games`: 4 jawne wywołania w endpointach (`/api/games`,
+  `/api/launch-game`, `/api/game-status`, `/api/stop-game`) zastąpione jednym
+  HTTP middleware (`@self.app.middleware("http")` w `ArcadeApp.__init__`),
+  które sprząta skończone gry przed każdym żądaniem.
+- Testy: `TestSaveLlmResponse` (4 testy: zapis pliku, tworzenie katalogu,
+  przycinanie historii do 20, domyślny katalog) w `test/llm_service_unit.py` i
+  `TestFinishedGamesMiddleware` (2 testy: middleware usuwa skończone gry a
+  zostawia uruchomione + zarejestrowany dokładnie raz) w `test/main_unit.py`.
+  Lokalnie: 89 passed, 5 skipped.
 
 ---
 
