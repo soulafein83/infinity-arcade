@@ -3,6 +3,7 @@
 Infinity Arcade - Main FastAPI application
 """
 
+import asyncio
 import json
 import logging
 import os
@@ -28,7 +29,7 @@ from starlette.responses import Response
 import lemonade_client as lc
 from infinity_arcade.arcade_games import ArcadeGames
 from infinity_arcade.utils import get_resource_path
-from infinity_arcade.game_launcher import GameLauncher
+from infinity_arcade.game_launcher import GameLauncher, filter_error_lines
 from infinity_arcade.game_orchestrator import GameOrchestrator
 from infinity_arcade.llm_service import LLMService
 
@@ -422,6 +423,37 @@ class ArcadeApp:
             self.game_launcher.cleanup_finished_games()
             running = game_id in self.game_launcher.running_games
             return JSONResponse({"running": running})
+
+        @self.app.get("/api/game-log/{game_id}")
+        async def game_log(game_id: str):
+            if game_id not in self.arcade_games.game_metadata:
+                raise HTTPException(status_code=404, detail="Game not found")
+            log_file = self.game_launcher.get_log_path(game_id)
+            lines: list = []
+            if log_file.exists():
+                try:
+                    with open(log_file, "r", encoding="utf-8", errors="replace") as f:
+                        lines = [line.rstrip("\n") for line in f.readlines()[-100:]]
+                except Exception as e:
+                    logger.error(f"Failed to read log for game {game_id}: {e}")
+                    lines = []
+            error_lines = filter_error_lines("\n".join(lines))
+            return JSONResponse(
+                {
+                    "game_id": game_id,
+                    "lines": lines,
+                    "last_error": error_lines[-1] if error_lines else None,
+                }
+            )
+
+        @self.app.post("/api/stop-game/{game_id}")
+        async def stop_game_endpoint(game_id: str):
+            self.game_launcher.cleanup_finished_games()
+            if game_id not in self.game_launcher.running_games:
+                raise HTTPException(status_code=404, detail="Game is not running")
+            # stop_game blocks up to ~5 s, so run it off the event loop
+            await asyncio.to_thread(self.game_launcher.stop_game, game_id)
+            return JSONResponse({"stopped": True})
 
         @self.app.delete("/api/delete-game/{game_id}")
         async def delete_game_endpoint(game_id: str):

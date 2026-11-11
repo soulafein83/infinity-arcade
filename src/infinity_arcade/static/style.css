@@ -223,6 +223,41 @@ body {
     background: #ff0000;
 }
 
+.stop-btn {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    padding: 4px 10px;
+    background: #ff4444;
+    border: none;
+    border-radius: 6px;
+    color: white;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: bold;
+    z-index: 1;
+}
+
+.stop-btn:hover {
+    background: #ff0000;
+}
+
+.game-error {
+    margin-top: 8px;
+    padding: 4px 6px;
+    font-size: 0.7rem;
+    color: #ff8080;
+    background: rgba(255, 68, 68, 0.15);
+    border-radius: 6px;
+    word-break: break-word;
+    text-align: left;
+    min-height: 0;
+}
+
+.game-error:empty {
+    display: none;
+}
+
 .game-title {
     font-size: 1rem;
     font-weight: bold;

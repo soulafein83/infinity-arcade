@@ -1315,14 +1315,24 @@ function renderGames() {
             deleteButtonHtml = `<button class="delete-btn" onclick="deleteGame('${gameId}')">&times;</button>`;
         }
         
+        // Only show stop button for the currently running game
+        let stopButtonHtml = '';
+        let gameErrorHtml = '';
+        if (runningGameId === gameId) {
+            stopButtonHtml = `<button class="stop-btn" onclick="stopGame('${gameId}')">Stop</button>`;
+            gameErrorHtml = `<div class="game-error" id="game-error-${gameId}"></div>`;
+        }
+        
         gameItem.innerHTML = `
             ${deleteButtonHtml}
+            ${stopButtonHtml}
             <div class="game-title">${gameData.title}</div>
+            ${gameErrorHtml}
         `;
         
         // Left click to launch game
         gameItem.addEventListener('click', (e) => {
-            if (!e.target.classList.contains('delete-btn')) {
+            if (!e.target.classList.contains('delete-btn') && !e.target.classList.contains('stop-btn')) {
                 launchGame(gameId);
             }
         });
@@ -1334,7 +1344,55 @@ function renderGames() {
         });
         
         grid.appendChild(gameItem);
+        
+        // For the running game, fetch its last error for the card
+        if (runningGameId === gameId) {
+            fetchRunningGameError(gameId);
+        }
     });
+}
+
+// Update the "last error" field on the running game's card
+async function fetchRunningGameError(gameId) {
+    const element = document.getElementById(`game-error-${gameId}`);
+    if (!element) return;
+    
+    try {
+        const response = await fetch(`/api/game-log/${gameId}`);
+        if (!response.ok) return;
+        const data = await response.json();
+        // The game may have stopped or been re-rendered in the meantime
+        if (runningGameId !== gameId) return;
+        element.textContent = data.last_error ? data.last_error : '';
+    } catch (error) {
+        // Ignore log fetch failures - the field simply stays empty
+    }
+}
+
+// Stop the running game via the API
+async function stopGame(gameId) {
+    try {
+        const response = await fetch(`/api/stop-game/${gameId}`, {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            if (runningGameId === gameId) {
+                runningGameId = null;
+                // Hide spinner and reset create button, same as when the game ends on its own
+                isGenerating = false;
+                document.getElementById('createBtn').disabled = false;
+                document.getElementById('gameSpinner').classList.remove('active');
+                document.getElementById('gamesGrid').style.display = 'grid';
+            }
+            renderGames();
+        } else {
+            const data = await response.json().catch(() => ({}));
+            alert(data.detail || 'Failed to stop game');
+        }
+    } catch (error) {
+        alert('Error stopping game: ' + error.message);
+    }
 }
 
 // Create a new game
@@ -1699,6 +1757,9 @@ function startGameStatusCheck() {
                 }
                 return;
             }
+            
+            // Game still running - refresh the last error shown on its card
+            fetchRunningGameError(currentGameId);
         } catch (error) {
             // Game probably finished
             const finishedGameId = runningGameId;

@@ -3,12 +3,50 @@ import os
 import signal
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
-from typing import Dict, Tuple
+from typing import Dict, Optional, TextIO, Tuple
 
 
 logger = logging.getLogger("infinity_arcade.main")
+
+# Lines containing any of these are treated as errors (used for the
+# "last error" surfaced in the UI and for filtering stderr on quick exits)
+ERROR_INDICATORS = [
+    "Error",
+    "Exception",
+    "Traceback",
+    'File "',
+    "line ",
+    "NameError",
+    "ImportError",
+    "SyntaxError",
+    "AttributeError",
+    "TypeError",
+    "ValueError",
+]
+
+# Lines matching any of these are noise, never treated as errors
+NOISE_PHRASES = [
+    "UserWarning",
+    "pkg_resources is deprecated",
+    "from pkg_resources import",
+    "pygame community",
+    "https://www.pygame.org",
+]
+
+
+def filter_error_lines(stderr: str) -> list:
+    """Return the lines from `stderr` that look like actual errors."""
+    lines = stderr.strip().split("\n") if stderr else []
+    actual_errors = []
+    for line in lines:
+        if any(skip_phrase in line for skip_phrase in NOISE_PHRASES):
+            continue
+        if line.strip() and any(indicator in line for indicator in ERROR_INDICATORS):
+            actual_errors.append(line)
+    return actual_errors
 
 
 class GameLauncher:
@@ -16,13 +54,63 @@ class GameLauncher:
 
     def __init__(self) -> None:
         self.running_games: Dict[str, subprocess.Popen] = {}
+        self.log_dir = Path.home() / ".infinity-arcade" / "logs"
+        self.log_files: Dict[str, TextIO] = {}
+
+    def get_log_path(self, game_id: str) -> Path:
+        """Path of the per-game log file (stdout + stderr are appended here)."""
+        return self.log_dir / f"{game_id}.log"
+
+    @staticmethod
+    def _write_to_log(log_fh: TextIO, header: str, text: str) -> None:
+        if text:
+            log_fh.write(f"{header}\n{text}\n")
+            log_fh.flush()
+
+    def _pump_stream(self, stream, game_id: str, log_fh: TextIO) -> None:
+        """Copy one stream to the game log line by line until EOF."""
+        try:
+            for line in stream:
+                log_fh.write(line)
+                log_fh.flush()
+        except Exception as e:
+            logger.debug(f"Log pump for game {game_id} stopped: {e}")
+        finally:
+            try:
+                stream.close()
+            except Exception:
+                pass
+
+    def _start_log_pump(self, game_id: str, process: subprocess.Popen, log_fh: TextIO) -> None:
+        """Pump stdout and stderr of a running game to its log file."""
+        threads = []
+        for stream in (process.stdout, process.stderr):
+            t = threading.Thread(
+                target=self._pump_stream, args=(stream, game_id, log_fh), daemon=True
+            )
+            t.start()
+            threads.append(t)
+
+        def _finalize() -> None:
+            for t in threads:
+                t.join()
+            fh = self.log_files.get(game_id)
+            if fh is not None:
+                try:
+                    fh.close()
+                except Exception:
+                    pass
+                self.log_files.pop(game_id, None)
+
+        threading.Thread(target=_finalize, daemon=True).start()
 
     def launch_game_process(self, game_file: Path, game_id: str) -> Tuple[bool, str]:
         """Launch a game process and return (success, error_message).
 
         This mirrors the previous behavior used in ArcadeGames: if the process
         exits within ~2 seconds, treat that as a failure for pygame-based games
-        and capture stderr to present a useful error message.
+        and capture stderr to present a useful error message. All output is
+        also appended to the per-game log file in ~/.infinity-arcade/logs/.
         """
         try:
             if getattr(sys, "frozen", False):
@@ -31,6 +119,13 @@ class GameLauncher:
             else:
                 cmd = [sys.executable, str(game_file)]
                 logger.debug(f"Development mode - Launching: {' '.join(cmd)}")
+
+            # Per-game log: append so repeated launches of the same game
+            # accumulate their history in one file
+            self.log_dir.mkdir(parents=True, exist_ok=True)
+            # pylint: disable=consider-using-with
+            log_fh = open(self.get_log_path(game_id), "a", encoding="utf-8")
+            self.log_files[game_id] = log_fh
 
             # pylint: disable=consider-using-with
             # start_new_session=True gives the game its own process group so
@@ -47,47 +142,22 @@ class GameLauncher:
             logger.debug(f"Game {game_id} subprocess started with PID {process.pid}")
 
             try:
-                stdout, stderr = process.communicate(timeout=2)
+                # wait() (instead of communicate()) works with PIPEs when the
+                # game is expected to keep running; communicate() is used only
+                # to drain the output of a process that already exited
+                process.wait(timeout=2)
                 end_time = time.time()
                 duration = end_time - start_time
                 logger.debug(
                     f"Game {game_id} subprocess (PID {process.pid}) EXITED after {duration:.3f} "
                     f"seconds with return code {process.returncode}"
                 )
+                stdout, stderr = process.communicate()
+                self._write_to_log(log_fh, "STDOUT:", stdout)
+                self._write_to_log(log_fh, "STDERR:", stderr)
 
                 # Filter out noisy warnings from stderr to get actual errors
-                stderr_lines = stderr.strip().split("\n") if stderr else []
-                actual_errors = []
-                for line in stderr_lines:
-                    if any(
-                        skip_phrase in line
-                        for skip_phrase in [
-                            "UserWarning",
-                            "pkg_resources is deprecated",
-                            "from pkg_resources import",
-                            "pygame community",
-                            "https://www.pygame.org",
-                        ]
-                    ):
-                        continue
-                    if line.strip() and any(
-                        indicator in line
-                        for indicator in [
-                            "Error",
-                            "Exception",
-                            "Traceback",
-                            'File "',
-                            "line ",
-                            "NameError",
-                            "ImportError",
-                            "SyntaxError",
-                            "AttributeError",
-                            "TypeError",
-                            "ValueError",
-                        ]
-                    ):
-                        actual_errors.append(line)
-
+                actual_errors = filter_error_lines(stderr)
                 filtered_stderr = "\n".join(actual_errors).strip()
 
                 if process.returncode != 0:
@@ -125,10 +195,12 @@ class GameLauncher:
                 print("=" * 60)
                 return True, "Game exited successfully"
             except subprocess.TimeoutExpired:
-                # Timeout is good - means the game is still running
+                # Timeout is good - means the game is still running; pump its
+                # output to the log file in background threads
                 end_time = time.time()
                 duration = end_time - start_time
                 self.running_games[game_id] = process
+                self._start_log_pump(game_id, process, log_fh)
                 logger.debug(
                     f"Game {game_id} subprocess (PID {process.pid}) STILL RUNNING after {duration:.3f} seconds timeout"
                 )

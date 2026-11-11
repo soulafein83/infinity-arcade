@@ -1,6 +1,6 @@
 # Plan ulepszeń — Infinity Arcade (fork `soulafein83/infinity-arcade`)
 
-> Stan: **wykonano 1.1, 2.1, 2.3, 2.4** (commity Partii A i B), reszta: propozycje.
+> Stan: **wykonano 1.1, 1.2, 1.3, 2.1, 2.3, 2.4** (commity Partii A–C), reszta: propozycje.
 > Prioritety: 🔴 wysokie (wpływ na stabilność/jakość gier), 🟡 średnie (UX/komfort), 🟢 niskie (porządek, przyszłość).
 >
 > Zasady forka: rozwijany oddzielnie od upstreamu (`lemonade-sdk/infinity-arcade`),
@@ -23,7 +23,7 @@ stwierdzone empirycznie (gra `a5dc07da` żyła po zamknięciu aplikacji).
   `start_new_session=True` i w `stop_game` zabijać **grupę procesów**
   (`os.killpg`), żeby nie zostawały wnuki.
 
-### 1.2. Powiadomienie frontendu o zgonie gry
+### 1.2. Powiadomienie frontendu o zgonie gry ✅
 **Problem:** gra może się rozsypać >2 s po starcie (po sprawdzeniu launcher).
 Klient dowiaduje się tylko, że status przestał zwracać `running: true`.
 
@@ -32,7 +32,7 @@ Klient dowiaduje się tylko, że status przestał zwracać `running: true`.
 - Endpoint `GET /api/game-log/{game_id}` (ostatnie N linii) + pole „last error” na karcie gry
   w UI; opcjonalnie SSE/WebSocket push przy wykryciu zgonu przez `cleanup_finished_games`.
 
-### 1.3. Endpoint zatrzymania gry
+### 1.3. Endpoint zatrzymania gry ✅
 **Problem:** w UI brak sposobu na zamknięcie działającej gry (launcher ma `stop_game`,
 ale brak marasy API).
 
