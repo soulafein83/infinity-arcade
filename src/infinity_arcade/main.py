@@ -110,7 +110,22 @@ class ArcadeApp:
             )
 
         # Initialize services that depend on the model
-        self.llm_service = LLMService(self.lemonade_handle, self.required_model)
+        # Thinking (reasoning) mode: off by default — verified on
+        # Qwen3.5-9B-GGUF that reasoning tokens are deducted from max_tokens
+        # before any output, which truncates the generated code (and even the
+        # title). Enable with INFINITY_ARCADE_THINKING=1 if desired.
+        self.thinking_enabled = os.environ.get(
+            "INFINITY_ARCADE_THINKING", ""
+        ).strip().lower() in ("1", "true", "yes", "on")
+        logger.info(
+            f"Thinking (reasoning) mode: {'on' if self.thinking_enabled else 'off'} "
+            "(INFINITY_ARCADE_THINKING)"
+        )
+        self.llm_service = LLMService(
+            self.lemonade_handle,
+            self.required_model,
+            no_thinking=not self.thinking_enabled,
+        )
         self.orchestrator = GameOrchestrator(
             self.arcade_games, self.game_launcher, self.llm_service
         )

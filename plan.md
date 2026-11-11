@@ -1,6 +1,6 @@
 # Plan ulepszeń — Infinity Arcade (fork `soulafein83/infinity-arcade`)
 
-> Stan: **wykonano 1.1, 1.2, 1.3, 2.1, 2.3, 2.4, 3.1, 3.2, 4, 5** (commity Partii A–D + 3.2 + 4), reszta: propozycje.
+> Stan: **wykonano 1.1, 1.2, 1.3, 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 4, 5** (commity Partii A–D + 3.2 + 4 + 2.2), reszta: propozycje.
 > Prioritety: 🔴 wysokie (wpływ na stabilność/jakość gier), 🟡 średnie (UX/komfort), 🟢 niskie (porządek, przyszłość).
 >
 > Zasady forka: rozwijany oddzielnie od upstreamu (`lemonade-sdk/infinity-arcade`),
@@ -51,7 +51,7 @@ a gra dostaje auto-fix, który często nie daje rady.
 sprawdzać `chunk.choices[0].finish_reason`; przy `"length"` wysłać wyraźny błąd
 „kod ucięty — zwiększ limit / skróć grę” zamiast cichego auto-fixu.
 
-### 2.2. Oszczędzanie budżetu tokenów (model „thinking”)
+### 2.2. Oszczędzanie budżetu tokenów (model „thinking") ✅
 **Problem:** Qwen 3.5-9B to model z tokenami racjonowania (`reasoning_content`),
 które spalone są z `max_tokens` przed właściwym kodem.
 
@@ -61,6 +61,19 @@ które spalone są z `max_tokens` przed właściwym kodem.
   wymaga testu na tym modelu) — więcej miejsca na kod przy tym samym limicie.
 - Tytuł: `max_tokens: 800` jest bezpieczne, ale dla non-thinking można spaść do ~100;
   dla thinking zostawić 800 — ustawić świadomie per tryb, nie „na oko”.
+
+**Wykonanie (testy na Qwen3.5-9B-GGUF):**
+- zthinking WŁĄCZONY: tytuł spalał całe `max_tokens=800` na myślenie
+  (`finish_reason="length"`, pusty `content` → fallback tytułowy);
+- zthinking WYŁĄCZONY: tytuł w 4 tokenach („Speed Pong"), kod generuje się
+  bez zużycia budżetu na reasoning; parametr działa też w streamingu;
+- model bez tej opcji (Gemma-4-E4B) akceptuje parametr bez błędu
+  (llama.cpp ignoruje nieznane kwargi) — bezpieczne wysyłać zawsze.
+- Implementacja: `no_thinking` w `llm_service.py` (tytuł: `max_tokens` 100
+  non-thinking / 800 thinking; kod: `extra_body` z `enable_thinking: false`),
+  przełącznik env `INFINITY_ARCADE_THINKING` (domyślnie **off**), testy
+  jednostkowe `test/llm_service_unit.py`, test żywy pełnego przepływu
+  (create-game na Qwen3.5-9B: tytuł + kompletna gra).
 
 ### 2.3. Lepsze prompty (wnioski z sesji z Pongiem) ✅
 - **Tryb `create`:** dodać do system promptu sekcję o wymaganej geometrii gry

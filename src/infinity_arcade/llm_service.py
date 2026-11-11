@@ -13,6 +13,20 @@ from lemonade_client import LemonadeClient
 logger = logging.getLogger("infinity_arcade.main")
 
 
+# Request kwargs that disable "thinking" (reasoning) tokens for models that
+# support them (e.g. Qwen3.x). Verified on Qwen3.5-9B-GGUF: with thinking on,
+# the model spends the entire max_tokens budget on reasoning_content before
+# producing any output (even a 4-token title got truncated at 800). Sending
+# the kwarg is harmless on models without this option (llama.cpp ignores it).
+NO_THINKING_KWARGS = {"chat_template_kwargs": {"enable_thinking": False}}
+
+# Title budget per mode: a 2-3 word title needs very little once the model is
+# not reasoning; thinking models need a much larger budget because
+# reasoning tokens are deducted from max_tokens first.
+TITLE_MAX_TOKENS_NO_THINKING = 100
+TITLE_MAX_TOKENS_THINKING = 800
+
+
 @dataclass
 class ExtractedCode:
     """Represents successfully extracted Python code from an LLM response."""
@@ -41,7 +55,7 @@ class LLMError:
 
 
 async def generate_game_title(
-    lemonade_handle: LemonadeClient, model: str, prompt: str
+    lemonade_handle: LemonadeClient, model: str, prompt: str, no_thinking: bool = True
 ) -> str:
     logger.debug(f"Generating title for prompt: {prompt[:50]}...")
 
@@ -65,16 +79,24 @@ Return ONLY the title, nothing else."""
             {"role": "user", "content": title_prompt},
         ]
 
+        payload = {
+            "model": model,
+            "messages": messages,
+            "stream": False,
+            # Small budget is enough without reasoning tokens; thinking models
+            # spend max_tokens on reasoning first, so they keep the larger one
+            "max_tokens": (
+                TITLE_MAX_TOKENS_NO_THINKING if no_thinking else TITLE_MAX_TOKENS_THINKING
+            ),
+            "temperature": 0.3,
+        }
+        if no_thinking:
+            payload.update(NO_THINKING_KWARGS)
+
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.post(
                 f"{lemonade_handle.url}/api/v1/chat/completions",
-                json={
-                    "model": model,
-                    "messages": messages,
-                    "stream": False,
-                    "max_tokens": 800,
-                    "temperature": 0.3,
-                },
+                json=payload,
                 headers={"Content-Type": "application/json"},
             )
 
@@ -145,6 +167,7 @@ async def generate_game_code_with_llm(
     mode: str,
     content: str,
     mode_data: str | None = None,
+    no_thinking: bool = True,
 ) -> Union[str, ExtractedCode, LLMError, None]:
     if mode == "create":
         # pylint: disable=line-too-long
@@ -266,7 +289,7 @@ Provide the complete modified game code."""
             timeout=600.0,
         )
 
-        response = await openai_client.chat.completions.create(
+        create_kwargs = dict(
             model=model,
             messages=messages,
             stream=True,
@@ -274,6 +297,12 @@ Provide the complete modified game code."""
             temperature=0.3,
             top_p=0.9,
         )
+        # Without reasoning tokens, the whole max_tokens budget goes to the
+        # actual code (verified on Qwen3.5-9B-GGUF)
+        if no_thinking:
+            create_kwargs["extra_body"] = dict(NO_THINKING_KWARGS)
+
+        response = await openai_client.chat.completions.create(**create_kwargs)
 
         full_response = ""
         finish_reason: Optional[str] = None
@@ -337,17 +366,25 @@ Provide the complete modified game code."""
 class LLMService:
     """Centralized service for all LLM-related operations used by the arcade."""
 
-    def __init__(self, lemonade_handle: LemonadeClient, model: str):
+    def __init__(self, lemonade_handle: LemonadeClient, model: str, no_thinking: bool = True):
         self._lemonade_handle = lemonade_handle
         self._model = model
+        self._no_thinking = no_thinking
 
     async def stream_game_code(
         self, mode: str, content: str, mode_data: str | None = None
     ) -> AsyncGenerator[Union[str, ExtractedCode, LLMError, None], None]:
         async for chunk in generate_game_code_with_llm(
-            self._lemonade_handle, self._model, mode, content, mode_data
+            self._lemonade_handle,
+            self._model,
+            mode,
+            content,
+            mode_data,
+            no_thinking=self._no_thinking,
         ):
             yield chunk
 
     async def generate_title(self, prompt: str) -> str:
-        return await generate_game_title(self._lemonade_handle, self._model, prompt)
+        return await generate_game_title(
+            self._lemonade_handle, self._model, prompt, no_thinking=self._no_thinking
+        )
