@@ -1,4 +1,6 @@
 import logging
+import os
+import signal
 import subprocess
 import sys
 import time
@@ -31,8 +33,14 @@ class GameLauncher:
                 logger.debug(f"Development mode - Launching: {' '.join(cmd)}")
 
             # pylint: disable=consider-using-with
+            # start_new_session=True gives the game its own process group so
+            # stop_game can kill it together with any grandchild processes
             process = subprocess.Popen(
-                cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                start_new_session=True,
             )
 
             start_time = time.time()
@@ -131,25 +139,31 @@ class GameLauncher:
 
     def stop_game(self, game_id: str) -> None:
         if game_id in self.running_games:
+            process = self.running_games[game_id]
+            pid = process.pid
             try:
-                process = self.running_games[game_id]
                 logger.debug(
-                    f"MANUALLY STOPPING game {game_id} subprocess (PID {process.pid})"
+                    f"MANUALLY STOPPING game {game_id} process group (PID {pid})"
                 )
-                process.terminate()
+                # Kill the whole process group (game + its children)
+                os.killpg(pid, signal.SIGTERM)
                 try:
                     process.wait(timeout=5)
                     logger.debug(
-                        f"Game {game_id} subprocess (PID {process.pid}) terminated gracefully"
+                        f"Game {game_id} process group (PID {pid}) terminated gracefully"
                     )
                 except subprocess.TimeoutExpired:
                     logger.debug(
-                        f"Game {game_id} subprocess (PID {process.pid}) did not terminate gracefully, killing..."
+                        f"Game {game_id} process group (PID {pid}) did not terminate gracefully, killing..."
                     )
-                    process.kill()
+                    os.killpg(pid, signal.SIGKILL)
                     logger.debug(
-                        f"Game {game_id} subprocess (PID {process.pid}) killed"
+                        f"Game {game_id} process group (PID {pid}) killed"
                     )
+            except (ProcessLookupError, PermissionError):
+                logger.debug(
+                    f"Game {game_id} process group (PID {pid}) no longer exists"
+                )
             except Exception as e:
                 print(f"Error stopping game {game_id}: {e}")
             finally:

@@ -30,6 +30,16 @@ class ExtractedCode:
         return self.code
 
 
+@dataclass
+class LLMError:
+    """A clear LLM-side failure (e.g. truncated response) with a user-facing message."""
+
+    message: str
+
+    def __str__(self) -> str:
+        return self.message
+
+
 async def generate_game_title(
     lemonade_handle: LemonadeClient, model: str, prompt: str
 ) -> str:
@@ -135,7 +145,7 @@ async def generate_game_code_with_llm(
     mode: str,
     content: str,
     mode_data: str | None = None,
-) -> Union[str, ExtractedCode, None]:
+) -> Union[str, ExtractedCode, LLMError, None]:
     if mode == "create":
         # pylint: disable=line-too-long
         system_prompt = """You are an expert Python game developer. Generate a complete, working Python game using pygame based on the user's description.
@@ -241,9 +251,13 @@ Provide the complete modified game code."""
         )
 
         full_response = ""
+        finish_reason: Optional[str] = None
         async for chunk in response:
             if chunk.choices and len(chunk.choices) > 0:
-                delta = chunk.choices[0].delta
+                choice = chunk.choices[0]
+                if choice.finish_reason is not None:
+                    finish_reason = choice.finish_reason
+                delta = choice.delta
                 if delta.content is not None:
                     content_chunk = delta.content
                     full_response += content_chunk
@@ -266,6 +280,23 @@ Provide the complete modified game code."""
         except Exception as e:
             logger.error(f"Failed to save LLM response to temp file: {e}")
 
+        # If the response hit the token limit, the code block is almost
+        # certainly incomplete — report it explicitly instead of letting
+        # an auto-fix silently fight against truncated code
+        if finish_reason == "length":
+            logger.warning(
+                f"LLM response for {mode} mode was truncated (finish_reason='length'); "
+                f"code is likely incomplete"
+            )
+            yield LLMError(
+                message=(
+                    "LLM response was cut off at the token limit — the generated "
+                    "code is incomplete and cannot be used. Try a simpler game "
+                    "prompt or increase the model's max_tokens."
+                )
+            )
+            return
+
         extracted_code = _extract_python_code(full_response)
         if extracted_code:
             logger.debug(f"Successfully extracted code for {mode} mode")
@@ -287,7 +318,7 @@ class LLMService:
 
     async def stream_game_code(
         self, mode: str, content: str, mode_data: str | None = None
-    ) -> AsyncGenerator[Union[str, ExtractedCode, None], None]:
+    ) -> AsyncGenerator[Union[str, ExtractedCode, LLMError, None], None]:
         async for chunk in generate_game_code_with_llm(
             self._lemonade_handle, self._model, mode, content, mode_data
         ):

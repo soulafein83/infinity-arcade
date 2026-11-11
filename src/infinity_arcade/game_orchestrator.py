@@ -6,7 +6,7 @@ from typing import AsyncGenerator
 
 from infinity_arcade.arcade_games import ArcadeGames
 from infinity_arcade.game_launcher import GameLauncher
-from infinity_arcade.llm_service import LLMService, ExtractedCode
+from infinity_arcade.llm_service import LLMService, ExtractedCode, LLMError
 
 
 logger = logging.getLogger("infinity_arcade.main")
@@ -42,6 +42,9 @@ class GameOrchestrator:
         async for result in self.llm.stream_game_code("create", prompt):
             if result is None:
                 yield f"data: {json.dumps({'type': 'error', 'message': 'Failed to generate code'})}\n\n"
+                return
+            elif isinstance(result, LLMError):
+                yield f"data: {json.dumps({'type': 'error', 'message': result.message})}\n\n"
                 return
             elif isinstance(result, ExtractedCode):
                 python_code = result.code
@@ -94,6 +97,9 @@ class GameOrchestrator:
         ):
             if result is None:
                 yield f"data: {json.dumps({'type': 'error', 'message': 'Failed to remix code'})}\n\n"
+                return
+            elif isinstance(result, LLMError):
+                yield f"data: {json.dumps({'type': 'error', 'message': result.message})}\n\n"
                 return
             elif isinstance(result, ExtractedCode):
                 remixed_code = result.code
@@ -171,10 +177,14 @@ class GameOrchestrator:
                 try:
                     current_code = game_file.read_text(encoding="utf-8")
                     fixed_code: str | None = None
+                    fix_error: str | None = None
                     async for result in self.llm.stream_game_code(
                         "debug", current_code, error_message
                     ):
                         if result is None:
+                            break
+                        elif isinstance(result, LLMError):
+                            fix_error = result.message
                             break
                         elif isinstance(result, ExtractedCode):
                             fixed_code = result.code
@@ -187,7 +197,7 @@ class GameOrchestrator:
                         retry_count += 1
                         continue
                     else:
-                        error_msg = f"Game '{game_title}' failed to launch and could not be automatically fixed: {error_message}"
+                        error_msg = f"Game '{game_title}' failed to launch and could not be automatically fixed: {fix_error or error_message}"
                         final_error_content = f"\n\n---\n\n> ❌ **FINAL ERROR**  \n> {error_msg}\n\n---\n\n"
                         yield f"data: {json.dumps({'type': 'content', 'content': final_error_content})}\n\n"
                         yield f"data: {json.dumps({'type': 'error', 'message': 'Game launch failed after fix attempt'})}\n\n"

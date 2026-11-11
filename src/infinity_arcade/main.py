@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import re
+import signal
 import subprocess
 import sys
 import time
@@ -559,15 +560,31 @@ def main():
     print(f"Opening browser to http://127.0.0.1:{port}")
     webbrowser.open(f"http://127.0.0.1:{port}")
 
-    try:
-        # Keep the main thread alive
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
+    # Shutdown: stop all running games, used by both Ctrl+C and SIGTERM
+    def shutdown() -> None:
         print("\nShutting down Infinity Arcade...")
         # Clean up any running games
         for game_id in list(arcade_app.game_launcher.running_games.keys()):
             arcade_app.game_launcher.stop_game(game_id)
+
+    stop_requested = {"flag": False}
+
+    # SIGTERM (e.g. `kill <pid>`) must run the same cleanup as Ctrl+C,
+    # otherwise child game processes are left orphaned
+    def handle_sigterm(signum, frame):
+        # Interrupt the main loop's sleep; cleanup happens in `finally`
+        stop_requested["flag"] = True
+
+    signal.signal(signal.SIGTERM, handle_sigterm)
+
+    try:
+        # Keep the main thread alive
+        while not stop_requested["flag"]:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        shutdown()
 
 
 if __name__ == "__main__":
