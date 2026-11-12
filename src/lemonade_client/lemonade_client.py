@@ -24,7 +24,9 @@ def _build_models():
     models = {
         "high_end": ("Qwen3-Coder-30B-A3B-Instruct-GGUF", 18.6),
         "npu": ("Playable1-GGUF-Q4_K_M", 4.68),
-        "default": ("Qwen3.5-9B-MTP-GGUF-UD-Q4_K_XL", 6.57),
+        # Fork: the user's own server runs Ornith-1.5-9B (Q4_K_M), so it is
+        # the default tier model (the app never downloads models itself).
+        "default": ("Ornith-1.5-9B-GGUF-Q4_K_M", 6.24),
     }
     for key in models:
         override = os.environ.get(f"LEMONADE_MODEL_{key.upper()}")

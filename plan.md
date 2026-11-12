@@ -154,6 +154,19 @@ W forku wiele rzeczy jest zaszytych — warto wydostać do konfiguracji
 | `install-server` / `install-model` | marasy + UI | ukryć w forku (modelami zarządza użytkownik ręcznie) |
 | `webbrowser.open` przy starcie | `main()` | flaga `--no-browser` |
 
+**Wykonanie:**
+- `LEMONADE_URL` (domyślnie `http://127.0.0.1:13305`) — URL własnego serwera;
+  aplikacja go nie startuje i nie instaluje serwera ani modeli (status tylko
+  raportuje, instalacja ukryta).
+- Wybór modelu: override tierów `LEMONADE_MODEL_HIGH_END` / `LEMONADE_MODEL_NPU` /
+  `LEMONADE_MODEL_DEFAULT`, wymuszenie jednego modelu `INFINITY_ARCADE_MODEL`.
+- Port: `--port` / `INFINITY_ARCADE_PORT` (domyślnie `8081`); `--no-browser`
+  (domyślnie przeglądarka się otwiera).
+- Model domyślny forka: tier `default` w `MODELS` to `Ornith-1.5-9B-GGUF-Q4_K_M`
+  (6.24 GB) — model zainstalowany na własnym serwerze użytkownika (zamiast
+  upstreamowego `Qwen3.5-9B-MTP-GGUF-UD-Q4_K_XL`); tabelę modeli i override'y
+  pokrywają testy jednostkowe.
+
 ---
 
 ## 6. Testy i CI 🟢 ✅

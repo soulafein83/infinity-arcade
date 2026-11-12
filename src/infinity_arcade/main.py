@@ -168,9 +168,10 @@ class ArcadeApp:
 
         # Initialize services that depend on the model
         # Thinking (reasoning) mode: off by default — verified on
-        # Qwen3.5-9B-GGUF that reasoning tokens are deducted from max_tokens
-        # before any output, which truncates the generated code (and even the
-        # title). Enable with INFINITY_ARCADE_THINKING=1 if desired.
+        # Qwen3.5-9B-GGUF and Ornith-1.5-9B that reasoning tokens are
+        # deducted from max_tokens before any output, which truncates the
+        # generated code (and even the title).
+        # Enable with INFINITY_ARCADE_THINKING=1 if desired.
         self.thinking_enabled = os.environ.get(
             "INFINITY_ARCADE_THINKING", ""
         ).strip().lower() in ("1", "true", "yes", "on")

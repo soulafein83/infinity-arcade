@@ -116,11 +116,11 @@ Example:
 
 ```bash
 LEMONADE_URL=http://127.0.0.1:13305 \
-INFINITY_ARCADE_MODEL=Qwen3.5-9B-MTP-GGUF-UD-Q4_K_XL \
+INFINITY_ARCADE_MODEL=Ornith-1.5-9B-GGUF-Q4_K_M \
 infinity-arcade --port 8081 --no-browser
 ```
 
-> Thinking mode is off by default because, on models with reasoning tokens (e.g. Qwen3.5-9B),
+> Thinking mode is off by default because, on models with reasoning tokens (e.g. Qwen3.5-9B, Ornith-1.5-9B),
 > reasoning is deducted from `max_tokens` *before* the code is produced and can truncate the output.
 
 ## Architecture

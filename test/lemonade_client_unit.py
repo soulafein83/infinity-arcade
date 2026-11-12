@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 # Add the src directory to the path for module imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from lemonade_client import LemonadeClient
+from lemonade_client.lemonade_client import MODELS, _build_models
 from infinity_arcade.main import LEMONADE_MINIMUM_VERSION
 
 
@@ -1164,8 +1165,8 @@ class TestLemonadeClient(unittest.TestCase):
         with patch.object(self.client, "get_system_info", return_value=system_info):
             model_name, size_gb = await self.client.select_model_for_hardware()
 
-            self.assertEqual(model_name, "Qwen3.5-9B-MTP-GGUF-UD-Q4_K_XL")
-            self.assertEqual(size_gb, 6.57)
+            self.assertEqual(model_name, "Ornith-1.5-9B-GGUF-Q4_K_M")
+            self.assertEqual(size_gb, 6.24)
 
     async def test_select_model_for_hardware_system_info_failure(self):
         """Test model selection when system info fails."""
@@ -1173,8 +1174,36 @@ class TestLemonadeClient(unittest.TestCase):
             model_name, size_gb = await self.client.select_model_for_hardware()
 
             # Should return default model
-            self.assertEqual(model_name, "Qwen3.5-9B-MTP-GGUF-UD-Q4_K_XL")
-            self.assertEqual(size_gb, 6.57)
+            self.assertEqual(model_name, "Ornith-1.5-9B-GGUF-Q4_K_M")
+            self.assertEqual(size_gb, 6.24)
+
+
+class TestModelSelection(unittest.TestCase):
+    """Fork model table: the default tier is the user's own Ornith-1.5-9B
+    (Q4_K_M) model; tiers can still be overridden via LEMONADE_MODEL_*."""
+
+    def test_default_tier_is_ornith(self):
+        with patch("os.environ.get", return_value=None):
+            models = _build_models()
+        self.assertEqual(models["default"], ("Ornith-1.5-9B-GGUF-Q4_K_M", 6.24))
+
+    def test_other_tiers_keep_upstream_models(self):
+        with patch("os.environ.get", return_value=None):
+            models = _build_models()
+        self.assertEqual(
+            models["high_end"], ("Qwen3-Coder-30B-A3B-Instruct-GGUF", 18.6)
+        )
+        self.assertEqual(models["npu"], ("Playable1-GGUF-Q4_K_M", 4.68))
+
+    def test_env_override_replaces_default_tier(self):
+        with patch.dict(os.environ, {"LEMONADE_MODEL_DEFAULT": "My-Model"}):
+            models = _build_models()
+        self.assertEqual(models["default"], ("My-Model", None))
+
+    def test_module_level_models_default(self):
+        if os.environ.get("LEMONADE_MODEL_DEFAULT"):
+            self.skipTest("LEMONADE_MODEL_DEFAULT is set in the environment")
+        self.assertEqual(MODELS["default"], ("Ornith-1.5-9B-GGUF-Q4_K_M", 6.24))
 
 
 def run_async_test(coro):
