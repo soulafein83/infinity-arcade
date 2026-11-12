@@ -25,6 +25,8 @@ class ArcadeGames:
         # Per-game artifacts keyed by game_id (created on demand, not here)
         self.backup_dir = self.games_dir.parent / "backups"
         self.log_dir = self.games_dir.parent / "logs"
+        # Fork: preview screenshots (headless --screenshot captures)
+        self.preview_dir = self.games_dir.parent / "previews"
 
         # Ensure games directory exists
         self.games_dir.mkdir(parents=True, exist_ok=True)
@@ -76,13 +78,14 @@ class ArcadeGames:
 
     def delete_game(self, game_id: str) -> None:
         """Remove a game: its .py file, its auto-fix backups, its log file,
-        and its metadata entry."""
+        its preview screenshot, and its metadata entry."""
         game_file = self.games_dir / f"{game_id}.py"
         if game_file.exists():
             game_file.unlink()
-        # Backups ({game_id}.v{n}.py + .meta.json) and the per-game log
-        # ({game_id}.log) are all keyed by game_id
-        for extra_dir in (self.backup_dir, self.log_dir):
+        # Backups ({game_id}.v{n}.py + .meta.json), the per-game log
+        # ({game_id}.log) and the preview screenshot ({game_id}.png) are
+        # all keyed by game_id
+        for extra_dir in (self.backup_dir, self.log_dir, self.preview_dir):
             if extra_dir.is_dir():
                 for path in extra_dir.glob(f"{game_id}.*"):
                     try:

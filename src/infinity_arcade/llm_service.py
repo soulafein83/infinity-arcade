@@ -33,6 +33,17 @@ NO_THINKING_KWARGS = {"chat_template_kwargs": {"enable_thinking": False}}
 TITLE_MAX_TOKENS_NO_THINKING = 100
 TITLE_MAX_TOKENS_THINKING = 800
 
+# Fork: games are asked to support a headless `--screenshot` CLI mode so the
+# app can generate a preview thumbnail (~/.infinity-arcade/previews/) without
+# injecting any code into the game file - the support comes purely from the
+# prompts below, so auto-fix and remix cycles keep working untouched.
+SCREENSHOT_MODE_INSTRUCTION = """
+Screenshot mode (mandatory support):
+The game must accept the optional CLI arguments `--screenshot <seconds>` and `--screenshot-file <path>` (parsed with argparse or a simple sys.argv check):
+- when `--screenshot` is present: set os.environ["SDL_VIDEODRIVER"] = "dummy" and os.environ["SDL_AUDIODRIVER"] = "dummy" BEFORE pygame.init(), run the normal game loop for exactly the given number of seconds (start in the initial playable state, no user input required), then save the current screen with pygame.image.save(screen, path), where path is the value of `--screenshot-file` if that argument was provided, otherwise the default filename "screenshot.png", and exit with code 0
+- when `--screenshot` is NOT present: the game must behave exactly as a normal interactive game
+"""
+
 
 @dataclass
 class ExtractedCode:
@@ -206,7 +217,7 @@ async def generate_game_code_with_llm(
 ) -> Union[str, ExtractedCode, LLMError, None]:
     if mode == "create":
         # pylint: disable=line-too-long
-        system_prompt = """You are an expert Python game developer. Generate a complete, working Python game using pygame based on the user's description.
+        system_prompt = ("""You are an expert Python game developer. Generate a complete, working Python game using pygame based on the user's description.
 
 Rules:
 1. Use ONLY the pygame library - no external images, sounds, or files
@@ -225,8 +236,11 @@ Geometry rules (get these right - they are the most common failure):
 - Distinguish walls (continuous barriers) from single points or edge collisions - implement what the concept describes, not a simpler approximation
 
 Size rule: keep the game compact (roughly 300 lines of code or less). A complete, correct, compact game is better than a long, truncated one.
-
+"""
+        + SCREENSHOT_MODE_INSTRUCTION
+        + """
 Generate ONLY the Python code wrapped in a markdown code block using triple backticks (```python). Do not include any explanations outside the code block."""
+        )
 
         user_prompt = f"Create a game: {content}"
         messages = [
@@ -242,6 +256,7 @@ Rules:
 2. Use ONLY the pygame library - no external images, sounds, or files
 3. Make sure the game window closes properly when the user clicks the X button
 4. If the error indicates a missing asset or an import problem, replace it with a pygame-primitive equivalent instead of adding external files
+5. If the input code supports the optional `--screenshot <seconds>` CLI mode (headless preview: dummy SDL drivers, timed run, pygame.image.save), keep that support fully intact - do not remove or break it
 
 Generate ONLY the complete fixed Python code wrapped in a markdown code block using triple backticks (```python). Do not include any explanations outside the code block."""
 
@@ -262,7 +277,7 @@ Please fix the bug described in the error details and provide the complete corre
             {"role": "user", "content": user_prompt},
         ]
     elif mode == "remix":
-        system_prompt = """You are an expert Python game developer. You will be given an existing pygame game and a modification request. Your task is to modify the existing game according to the user's request while keeping it fully functional.
+        system_prompt = ("""You are an expert Python game developer. You will be given an existing pygame game and a modification request. Your task is to modify the existing game according to the user's request while keeping it fully functional.
 
 Rules:
 1. Use ONLY the pygame library - no external images, sounds, or files
@@ -279,8 +294,11 @@ Preservation rules (avoid regressions - this is the most common failure):
 - Do not rename variables, functions, or classes unless the modification requires it
 - Do not "fix", simplify, or improve existing behavior (including already-fixed quirks) unless explicitly asked
 - Output the COMPLETE file: unchanged sections must appear exactly as in the input code
-
+"""
+        + SCREENSHOT_MODE_INSTRUCTION
+        + """
 Generate ONLY the complete modified Python code wrapped in a markdown code block using triple backticks (```python)."""
+        )
 
         user_prompt = f"""Here is the existing game code:
 

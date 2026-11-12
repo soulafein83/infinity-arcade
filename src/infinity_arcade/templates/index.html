@@ -226,6 +226,21 @@
         </div>
     </div>
     
+    <!-- Preview Viewer (game screenshot modal, fork) -->
+    <div id="previewViewer" class="preview-viewer" style="display: none;">
+        <div class="preview-viewer-content">
+            <div class="preview-viewer-header">
+                <span id="previewViewerTitle" class="preview-viewer-title"></span>
+                <div class="preview-viewer-actions">
+                    <button class="preview-viewer-btn" onclick="closePreviewViewer()" title="Close">×</button>
+                </div>
+            </div>
+            <div class="preview-viewer-body">
+                <img id="previewViewerImage" src="" alt="Game preview">
+            </div>
+        </div>
+    </div>
+    
     <script src="/static/app.js"></script>
 </body>
 </html>

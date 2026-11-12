@@ -56,10 +56,16 @@ class GameLauncher:
         self.running_games: Dict[str, subprocess.Popen] = {}
         self.log_dir = Path.home() / ".infinity-arcade" / "logs"
         self.log_files: Dict[str, TextIO] = {}
+        # Fork: preview screenshots captured in headless `--screenshot` mode
+        self.preview_dir = Path.home() / ".infinity-arcade" / "previews"
 
     def get_log_path(self, game_id: str) -> Path:
         """Path of the per-game log file (stdout + stderr are appended here)."""
         return self.log_dir / f"{game_id}.log"
+
+    def get_preview_path(self, game_id: str) -> Path:
+        """Path of the per-game preview screenshot (PNG, headless capture)."""
+        return self.preview_dir / f"{game_id}.png"
 
     @staticmethod
     def _write_to_log(log_fh: TextIO, header: str, text: str) -> None:
@@ -208,6 +214,64 @@ class GameLauncher:
         except Exception as e:
             logger.error(f"Error launching game {game_id}: {e}")
             return False, str(e)
+
+    def capture_screenshot(
+        self, game_file: Path, dest_path: Path, seconds: int
+    ) -> Tuple[bool, str]:
+        """Run a game headless with `--screenshot <seconds>` and save a preview.
+
+        The game process is given the dummy SDL/Audio drivers plus the
+        screenshot arguments and is expected to exit with code 0 after
+        about `seconds` seconds, leaving a PNG at `dest_path`. Any failure
+        (timeout, non-zero exit, missing image) returns (False, message);
+        callers must treat a failed capture as non-fatal.
+        """
+        try:
+            dest_path.parent.mkdir(parents=True, exist_ok=True)
+            # Generous wall-clock margin: import + pygame init + the timed run
+            timeout = max(seconds, 1) + 60
+            env = os.environ.copy()
+            env["SDL_VIDEODRIVER"] = "dummy"
+            env["SDL_AUDIODRIVER"] = "dummy"
+            process = subprocess.run(
+                [
+                    sys.executable,
+                    str(game_file),
+                    "--screenshot",
+                    str(seconds),
+                    "--screenshot-file",
+                    str(dest_path),
+                ],
+                check=False,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                timeout=timeout,
+                env=env,
+            )
+        except subprocess.TimeoutExpired:
+            message = f"screenshot run timed out after {timeout}s"
+            logger.warning(f"Preview capture timed out for {dest_path}: {message}")
+            return False, message
+        except Exception as e:
+            logger.warning(f"Preview capture failed for {dest_path}: {e}")
+            return False, str(e)
+
+        if process.returncode != 0:
+            stderr_tail = " | ".join(
+                (process.stderr or "").strip().splitlines()[-3:]
+            )
+            message = (
+                stderr_tail
+                or f"game exited with code {process.returncode} (no stderr)"
+            )
+            logger.warning(f"Preview capture failed for {dest_path}: {message}")
+            return False, message
+        if not dest_path.exists():
+            message = "game exited successfully but did not save the screenshot"
+            logger.warning(f"Preview capture failed for {dest_path}: {message}")
+            return False, message
+        return True, str(dest_path)
 
     def stop_game(self, game_id: str) -> None:
         if game_id in self.running_games:

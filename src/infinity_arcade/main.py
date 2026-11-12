@@ -21,6 +21,7 @@ from fastapi.responses import (
     JSONResponse,
     StreamingResponse,
     RedirectResponse,
+    FileResponse,
 )
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -60,6 +61,32 @@ def parse_max_retries(raw: str | None) -> int:
         return 1
 
 
+def parse_screenshot_seconds(raw: str | None) -> int:
+    """Parse the INFINITY_ARCADE_SCREENSHOT_SECONDS env value.
+
+    How long (in seconds) a game runs headless in `--screenshot` mode so the
+    app can capture a preview thumbnail. Invalid or empty values fall back
+    to the default of 3; values are clamped to the 1..60 range.
+    """
+    if raw is None:
+        return 3
+    try:
+        return min(60, max(1, int(raw.strip())))
+    except ValueError:
+        return 3
+
+
+def parse_screenshots_enabled(raw: str | None) -> bool:
+    """Parse the INFINITY_ARCADE_SCREENSHOTS env value.
+
+    Preview screenshots are enabled by default; set INFINITY_ARCADE_SCREENSHOTS=0
+    (or false/no/off) to skip them entirely.
+    """
+    if raw is None:
+        return True
+    return raw.strip().lower() not in ("0", "false", "no", "off")
+
+
 class NoCacheStaticFiles(StaticFiles):
     """Custom StaticFiles class with no-cache headers"""
 
@@ -92,9 +119,12 @@ class ArcadeApp:
         self.llm_service = None
         self.orchestrator = None
         # Defaults; actual values are resolved in initialize_model_and_services
-        # (overridable via INFINITY_ARCADE_THINKING / INFINITY_ARCADE_MAX_RETRIES)
+        # (overridable via INFINITY_ARCADE_THINKING / INFINITY_ARCADE_MAX_RETRIES
+        # / INFINITY_ARCADE_SCREENSHOTS / INFINITY_ARCADE_SCREENSHOT_SECONDS)
         self.thinking_enabled = False
         self.max_retries = 1
+        self.screenshot_seconds = 3
+        self.screenshots_enabled = True
 
         # FastAPI app and resources
         self.app = FastAPI(title="Infinity Arcade", version="0.1.0")
@@ -158,13 +188,32 @@ class ArcadeApp:
             f"Auto-fix attempts on launch failure: {self.max_retries} "
             "(INFINITY_ARCADE_MAX_RETRIES)"
         )
+        # Fork: preview screenshots after a successful create/remix/auto-fix.
+        # Enabled by default; the game runs headless for N seconds in
+        # `--screenshot` mode and saves a PNG to ~/.infinity-arcade/previews/
+        self.screenshot_seconds = parse_screenshot_seconds(
+            os.environ.get("INFINITY_ARCADE_SCREENSHOT_SECONDS")
+        )
+        self.screenshots_enabled = parse_screenshots_enabled(
+            os.environ.get("INFINITY_ARCADE_SCREENSHOTS")
+        )
+        logger.info(
+            f"Game preview screenshots: "
+            f"{'on' if self.screenshots_enabled else 'off'} "
+            f"({self.screenshot_seconds}s headless run) "
+            "(INFINITY_ARCADE_SCREENSHOTS / INFINITY_ARCADE_SCREENSHOT_SECONDS)"
+        )
         self.llm_service = LLMService(
             self.lemonade_handle,
             self.required_model,
             no_thinking=not self.thinking_enabled,
         )
         self.orchestrator = GameOrchestrator(
-            self.arcade_games, self.game_launcher, self.llm_service
+            self.arcade_games,
+            self.game_launcher,
+            self.llm_service,
+            screenshot_seconds=self.screenshot_seconds,
+            screenshots_enabled=self.screenshots_enabled,
         )
 
     @staticmethod
@@ -581,6 +630,20 @@ class ArcadeApp:
             return JSONResponse(
                 {"code": code, "title": title, "line_count": len(code.splitlines())}
             )
+
+        @self.app.get("/api/game-preview/{game_id}")
+        async def game_preview_endpoint(game_id: str):
+            # Fork: serve the game's preview screenshot (PNG) captured in
+            # headless `--screenshot` mode. 404 when the game is unknown or
+            # has no preview (e.g. games created before this feature or
+            # when INFINITY_ARCADE_SCREENSHOTS=0) - the UI falls back to a
+            # placeholder.
+            if game_id not in self.arcade_games.game_metadata:
+                raise HTTPException(status_code=404, detail="Game not found")
+            preview_path = self.game_launcher.get_preview_path(game_id)
+            if not preview_path.exists():
+                raise HTTPException(status_code=404, detail="No preview available")
+            return FileResponse(preview_path, media_type="image/png")
 
 
 arcade_app = ArcadeApp()

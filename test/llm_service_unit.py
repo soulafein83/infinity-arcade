@@ -14,6 +14,7 @@ from infinity_arcade.llm_service import (
     NO_THINKING_KWARGS,
     TITLE_MAX_TOKENS_NO_THINKING,
     TITLE_MAX_TOKENS_THINKING,
+    SCREENSHOT_MODE_INSTRUCTION,
     ExtractedCode,
     LLMError,
     LLM_RESPONSE_DIR,
@@ -175,6 +176,44 @@ class TestCodeGeneration(unittest.TestCase):
         results, _ = self._run_create(True, chunks)
         errors = [r for r in results if isinstance(r, LLMError)]
         self.assertEqual(len(errors), 1)
+
+
+class TestScreenshotModePrompts(unittest.TestCase):
+    """Newly generated games (create/remix) must support the headless
+    `--screenshot` mode; debug only has to keep that support intact."""
+
+    def _system_prompt(self, mode, content, mode_data=None):
+        captured = {}
+        fake_client = _FakeOpenAIClient(captured, TestCodeGeneration.CODE_CHUNKS)
+        with patch(
+            "infinity_arcade.llm_service.AsyncOpenAI",
+            lambda **kwargs: fake_client,
+        ):
+            asyncio.run(
+                _collect(
+                    generate_game_code_with_llm(
+                        _lemonade_handle(), "test-model", mode, content,
+                        mode_data, no_thinking=True,
+                    )
+                )
+            )
+        return captured["messages"][0]["content"]
+
+    def test_create_prompt_requires_screenshot_mode(self):
+        system_prompt = self._system_prompt("create", "a pong game")
+        self.assertIn(SCREENSHOT_MODE_INSTRUCTION, system_prompt)
+        self.assertIn("--screenshot-file", system_prompt)
+
+    def test_remix_prompt_requires_screenshot_mode(self):
+        system_prompt = self._system_prompt(
+            "remix", "import pygame\n", "make the ball faster"
+        )
+        self.assertIn(SCREENSHOT_MODE_INSTRUCTION, system_prompt)
+
+    def test_debug_prompt_only_preserves_screenshot_support(self):
+        system_prompt = self._system_prompt("debug", "import pygame\n", "ValueError: boom")
+        self.assertNotIn(SCREENSHOT_MODE_INSTRUCTION, system_prompt)
+        self.assertIn("--screenshot", system_prompt)
 
 
 class TestExtractPythonCode(unittest.TestCase):

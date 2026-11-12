@@ -91,6 +91,11 @@ any model via environment variables (see [Configuration](#configuration)).
   `~/.infinity-arcade/backups/{game_id}.v{n}.py`; deleting a game removes its backups and log too.
 - **Reliable generation**: truncated LLM responses (cut-off code blocks) are detected and reported as a clear
   error instead of silently triggering a failing auto-fix.
+- **Game previews**: newly created and remixed games are run headless for a few seconds
+  (`--screenshot` mode, dummy SDL/audio drivers) and a preview thumbnail is saved to
+  `~/.infinity-arcade/previews/{game_id}.png`. Each game card shows the thumbnail (click for a
+  full-size viewer); games without a preview (e.g. older games) fall back to a placeholder.
+  Never blocks generation — a failed capture just means no thumbnail.
 
 ## Configuration
 
@@ -101,6 +106,8 @@ any model via environment variables (see [Configuration](#configuration)).
 | Force one specific model | `INFINITY_ARCADE_MODEL` | hardware-based selection |
 | Thinking/reasoning mode | `INFINITY_ARCADE_THINKING=1` to enable | **off** (saves the token budget for the generated code) |
 | Auto-fix attempts on launch failure | `INFINITY_ARCADE_MAX_RETRIES` | `1` |
+| Preview screenshot length (headless run) | `INFINITY_ARCADE_SCREENSHOT_SECONDS` | `3` (clamped to 1–60) |
+| Preview screenshots on/off | `INFINITY_ARCADE_SCREENSHOTS=0` to disable | **on** |
 | Web server port | `--port` CLI flag or `INFINITY_ARCADE_PORT` | `8081` |
 | Don't open the browser | `--no-browser` | browser opens at startup |
 | Log level | `--log-level {debug,info,warning,error}` | `info` |
@@ -129,7 +136,9 @@ Games are generated with the following constraints:
 
 The generation prompts (create / remix / debug) are tuned in this fork: explicit geometry rules to prevent
 swapped axes, strict "keep everything else unchanged" instructions for remixes, and the game's recent stderr
-lines included in debug requests so the model gets full context.
+lines included in debug requests so the model gets full context. Newly created and remixed games are also
+required to support an optional `--screenshot <seconds>` CLI mode (headless timed run saving a PNG) — this is
+how the app captures preview thumbnails without injecting any code into the game files.
 
 ### Game Lifecycle
 
@@ -156,6 +165,8 @@ Games and their artifacts are cached under the `.infinity-arcade` folder in your
 ├── backups/
 │   ├── abc12345.v1.py   # Pre-auto-fix backup of abc12345.py
 │   └── abc12345.v2.py
+├── previews/
+│   ├── abc12345.png     # Preview screenshot (headless `--screenshot` run)
 └── llm-responses/
     └── 20250101T120000_create.txt   # Full LLM responses (debug, latest 20 kept)
 ```

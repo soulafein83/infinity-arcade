@@ -1,9 +1,10 @@
+import asyncio
 import json
 import logging
 import shutil
 import time
 from pathlib import Path
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Tuple
 
 from infinity_arcade.arcade_games import ArcadeGames
 from infinity_arcade.game_launcher import GameLauncher
@@ -17,11 +18,20 @@ class GameOrchestrator:
     """Coordinates storage, launching, and LLM to implement arcade workflows."""
 
     def __init__(
-        self, storage: ArcadeGames, launcher: GameLauncher, llm_service: LLMService
+        self,
+        storage: ArcadeGames,
+        launcher: GameLauncher,
+        llm_service: LLMService,
+        screenshot_seconds: int = 3,
+        screenshots_enabled: bool = True,
     ) -> None:
         self.storage = storage
         self.launcher = launcher
         self.llm = llm_service
+        # Fork: preview screenshot settings (INFINITY_ARCADE_SCREENSHOT_SECONDS
+        # / INFINITY_ARCADE_SCREENSHOTS, resolved by the web app)
+        self.screenshot_seconds = screenshot_seconds
+        self.screenshots_enabled = screenshots_enabled
 
     def _get_game_file_path(self, game_id: str) -> Path:
         if game_id in self.storage.builtin_games:
@@ -78,7 +88,9 @@ class GameOrchestrator:
         # Launch
         launch_message = "Launching game..."
         yield f"data: {json.dumps({'type': 'status', 'message': launch_message})}\n\n"
-        async for item in self.launch_game_with_auto_fix_streaming(game_id, game_title):
+        async for item in self.launch_game_with_auto_fix_streaming(
+            game_id, game_title, capture_preview=True
+        ):
             yield item
 
     async def remix_and_launch_game_with_streaming(
@@ -134,7 +146,7 @@ class GameOrchestrator:
         launch_message = "Launching remixed game..."
         yield f"data: {json.dumps({'type': 'status', 'message': launch_message})}\n\n"
         async for item in self.launch_game_with_auto_fix_streaming(
-            new_game_id, new_title
+            new_game_id, new_title, capture_preview=True
         ):
             yield item
 
@@ -169,8 +181,41 @@ class GameOrchestrator:
         except Exception as e:
             logger.warning(f"Failed to back up game {game_id} before auto-fix: {e}")
 
+    async def _capture_game_preview(self, game_id: str) -> bool:
+        """Best-effort headless screenshot of a game (fork preview feature).
+
+        Runs the game with `--screenshot <seconds>` (dummy SDL/audio drivers)
+        and saves the result to ~/.infinity-arcade/previews/{game_id}.png.
+        The capture runs in a worker thread so the event loop stays
+        responsive. Failures are logged and never break the create/remix
+        flow - the game simply gets no thumbnail (the UI falls back to a
+        placeholder).
+        """
+        game_file = self._get_game_file_path(game_id)
+        dest_path = self.launcher.get_preview_path(game_id)
+
+        def _capture() -> Tuple[bool, str]:
+            return self.launcher.capture_screenshot(
+                game_file, dest_path, self.screenshot_seconds
+            )
+
+        try:
+            success, message = await asyncio.to_thread(_capture)
+        except Exception as e:
+            logger.warning(f"Preview capture failed for game {game_id}: {e}")
+            return False
+        if success:
+            logger.info(f"Preview screenshot saved for game {game_id}: {dest_path}")
+        else:
+            logger.warning(f"Preview capture failed for game {game_id}: {message}")
+        return success
+
     async def launch_game_with_auto_fix_streaming(
-        self, game_id: str, game_title: str, max_retries: int = 1
+        self,
+        game_id: str,
+        game_title: str,
+        max_retries: int = 1,
+        capture_preview: bool = False,
     ) -> AsyncGenerator[str, None]:
         retry_count = 0
         while retry_count <= max_retries:
@@ -184,6 +229,15 @@ class GameOrchestrator:
                 game_file, game_id
             )
             if success:
+                # Fork: after a successful create/remix/auto-fix, capture a
+                # preview screenshot (best effort - never blocks the launch)
+                if capture_preview and self.screenshots_enabled:
+                    yield f"data: {json.dumps({'type': 'status', 'message': 'Capturing preview screenshot...'})}\n\n"
+                    if await self._capture_game_preview(game_id):
+                        meta = self.storage.game_metadata.get(game_id)
+                        if meta is not None:
+                            meta["has_preview"] = True
+                            self.storage.save_metadata()
                 message = f"Game '{game_title}' created and launched successfully!"
                 complete_data = {
                     "type": "complete",

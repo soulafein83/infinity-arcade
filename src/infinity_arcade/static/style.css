@@ -267,6 +267,44 @@ body {
     color: #00ff41;
 }
 
+/* Preview thumbnail on the game card (fork): fills the space above the
+   title; falls back to a placeholder icon when no screenshot exists */
+.game-thumb {
+    flex: 1;
+    min-height: 48px;
+    width: 100%;
+    margin-bottom: 8px;
+    border: 1px solid #00ff41;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #0d0d1a;
+    cursor: zoom-in;
+    transition: border-color 0.2s ease;
+}
+
+.game-thumb:hover {
+    border-color: #00ffff;
+}
+
+.game-thumb img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.game-thumb.no-preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    opacity: 0.55;
+}
+
+.game-thumb.no-preview::before {
+    content: "🎮";
+}
+
 .game-meta {
     margin-top: 4px;
     font-size: 0.7rem;
@@ -384,6 +422,83 @@ body {
     line-height: 1.5;
     color: #c8d3e8;
     white-space: pre;
+}
+
+/* Game preview viewer (modal, fork) - mirrors the code viewer layout */
+.preview-viewer {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.preview-viewer-content {
+    background: #0d0d1a;
+    border: 2px solid #00ff41;
+    border-radius: 12px;
+    width: min(800px, 90vw);
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 25px rgba(0, 255, 65, 0.3);
+}
+
+.preview-viewer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 15px;
+    background: #16213e;
+    border-bottom: 1px solid #00ff41;
+    border-radius: 10px 10px 0 0;
+}
+
+.preview-viewer-title {
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: #00ff41;
+    word-wrap: break-word;
+}
+
+.preview-viewer-actions {
+    display: flex;
+    gap: 8px;
+    margin-left: 15px;
+}
+
+.preview-viewer-btn {
+    background: #1a1a2e;
+    border: 1px solid #00ff41;
+    border-radius: 6px;
+    color: #00ff41;
+    padding: 4px 10px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.preview-viewer-btn:hover {
+    background: #00ff41;
+    color: #0d0d1a;
+}
+
+.preview-viewer-body {
+    padding: 15px;
+    overflow: auto;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.preview-viewer-body img {
+    max-width: 100%;
+    max-height: 70vh;
+    border-radius: 6px;
+    display: block;
 }
 
 .sidecar {

@@ -1187,10 +1187,37 @@ async function copyCode() {
 
 // Close the code viewer with the Escape key or a click on the backdrop
 document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeCodeViewer();
+    if (e.key === 'Escape') {
+        closeCodeViewer();
+        closePreviewViewer();
+    }
 });
 document.getElementById('codeViewer').addEventListener('click', (e) => {
     if (e.target.id === 'codeViewer') closeCodeViewer();
+});
+
+// Preview viewer (fork): full-size game screenshot modal
+function openGamePreview(gameId, event) {
+    if (event) event.stopPropagation();
+    const viewer = document.getElementById('previewViewer');
+    const titleEl = document.getElementById('previewViewerTitle');
+    const imageEl = document.getElementById('previewViewerImage');
+    if (!viewer || !titleEl || !imageEl) return;
+    const gameData = games[gameId] || {};
+    titleEl.textContent = gameData.title || gameId;
+    imageEl.src = `/api/game-preview/${gameId}`;
+    viewer.style.display = 'flex';
+}
+
+function closePreviewViewer() {
+    const viewer = document.getElementById('previewViewer');
+    const imageEl = document.getElementById('previewViewerImage');
+    if (viewer) viewer.style.display = 'none';
+    if (imageEl) imageEl.src = '';
+}
+
+document.getElementById('previewViewer').addEventListener('click', (e) => {
+    if (e.target.id === 'previewViewer') closePreviewViewer();
 });
 
 async function copyPrompt() {
@@ -1455,18 +1482,32 @@ function renderGames() {
             metaHtml = `<div class="game-meta chain">${links.join('<span class="chain-arrow">→</span>')}</div>`;
         }
 
+        // Preview thumbnail (fork): clicking it opens the full-size preview
+        // modal. Games without a screenshot (created before this feature or
+        // when INFINITY_ARCADE_SCREENSHOTS=0) fall back to a placeholder icon.
+        const thumbnailHtml = `
+            <div class="game-thumb" onclick="openGamePreview('${gameId}', event)" title="Preview">
+                <img src="/api/game-preview/${gameId}" alt=""
+                     onerror="this.closest('.game-thumb').classList.add('no-preview'); this.remove();">
+            </div>`;
+
         gameItem.innerHTML = `
             ${deleteButtonHtml}
             ${stopButtonHtml}
             ${runningBadgeHtml}
+            ${thumbnailHtml}
             <div class="game-title">${gameData.title}</div>
             ${metaHtml}
             ${gameErrorHtml}
         `;
         
-        // Left click to launch game
+        // Left click to launch game (clicks on the thumbnail open the preview)
         gameItem.addEventListener('click', (e) => {
-            if (!e.target.classList.contains('delete-btn') && !e.target.classList.contains('stop-btn')) {
+            if (
+                !e.target.classList.contains('delete-btn') &&
+                !e.target.classList.contains('stop-btn') &&
+                !e.target.closest('.game-thumb')
+            ) {
                 launchGame(gameId);
             }
         });
